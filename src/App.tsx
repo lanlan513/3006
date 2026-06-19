@@ -4,6 +4,7 @@ import StoryList from '@/pages/StoryList';
 import StoryDetail from '@/pages/StoryDetail';
 import CharacterHall from '@/pages/CharacterHall';
 import CharacterDetail from '@/pages/CharacterDetail';
+import FairyMap from '@/pages/FairyMap';
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/stories/:id" element={<StoryDetail />} />
         <Route path="/characters" element={<CharacterHall />} />
         <Route path="/characters/:id" element={<CharacterDetail />} />
+        <Route path="/fairy-map" element={<FairyMap />} />
       </Routes>
     </Router>
   );

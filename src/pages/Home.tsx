@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SearchBar from '@/components/SearchBar';
 import StoryCard from '@/components/StoryCard';
@@ -46,6 +46,10 @@ export default function Home() {
             <Link to="/stories" className="fairy-button inline-flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
               开始阅读
+            </Link>
+            <Link to="/fairy-map" className="fairy-button inline-flex items-center gap-2">
+              <Globe className="w-5 h-5" />
+              童话地图
             </Link>
             <Link to="/characters" className="fairy-button-outline inline-flex items-center gap-2">
               <Crown className="w-5 h-5" />

@@ -63,6 +63,6 @@ export interface Story {
   characters: string[];
 }
 
-export type Region = '全部' | '丹麦' | '德国' | '中国' | '阿拉伯' | '古希腊';
+export type Region = '全部' | '丹麦' | '德国' | '中国' | '阿拉伯' | '古希腊' | '法国' | '俄罗斯' | '日本' | '印度' | '北欧' | '英国';
 
-export const REGIONS: Region[] = ['全部', '丹麦', '德国', '中国', '阿拉伯', '古希腊'];
+export const REGIONS: Region[] = ['全部', '丹麦', '德国', '中国', '阿拉伯', '古希腊', '法国', '俄罗斯', '日本', '印度', '北欧', '英国'];

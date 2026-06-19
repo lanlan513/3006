@@ -13,19 +13,27 @@ import {
   Heart,
   Sparkles,
   Check,
+  Users,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import StoryCard from '@/components/StoryCard';
+import CharacterCard from '@/components/CharacterCard';
 import FloatingDecorations from '@/components/FloatingDecorations';
-import { useStoryStore, getStoryById } from '@/store/storyStore';
+import { useStoryStore, getStoryById, getCharactersByStoryId } from '@/store/storyStore';
 
 export default function StoryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const stories = useStoryStore((state) => state.stories);
+  const allCharacters = useStoryStore((state) => state.characters);
+  const likedStories = useStoryStore((state) => state.likedStories);
   const toggleLike = useStoryStore((state) => state.toggleLike);
-  const isLiked = useStoryStore((state) => (id ? state.likedStories.has(id) : false));
   const story = useMemo(() => getStoryById(stories, id || ''), [stories, id]);
+  const isLiked = useMemo(() => (id ? likedStories.has(id) : false), [likedStories, id]);
+  const storyCharacters = useMemo(
+    () => (id ? getCharactersByStoryId(allCharacters, id) : []),
+    [allCharacters, id]
+  );
 
   const [currentPage, setCurrentPage] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -305,6 +313,25 @@ export default function StoryDetail() {
               />
             </div>
           </div>
+
+          {storyCharacters.length > 0 && (
+            <div className="mt-16 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-rainbow flex items-center justify-center">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-fairy text-gray-800">故事角色</h2>
+                  <p className="text-sm text-gray-500 font-body">《{story.title}》中的精彩角色</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {storyCharacters.map((character) => (
+                  <CharacterCard key={character.id} character={character} variant="compact" />
+                ))}
+              </div>
+            </div>
+          )}
 
           {relatedStories.length > 0 && (
             <div className="mt-16 mb-8">

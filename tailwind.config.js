@@ -73,6 +73,8 @@ export default {
         "gradient-fairy": "linear-gradient(135deg, #D4A5FF 0%, #FFD4E5 50%, #A5D8FF 100%)",
         "gradient-sunset": "linear-gradient(135deg, #FFB6C1 0%, #FFD4E5 50%, #FFD700 100%)",
         "gradient-mint": "linear-gradient(135deg, #B5EAD7 0%, #A5D8FF 100%)",
+        "gradient-gold": "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+        "gradient-rainbow": "linear-gradient(135deg, #FF6B6B 0%, #FFD93D 25%, #6BCB77 50%, #4D96FF 75%, #9B59B6 100%)",
         "gradient-bookshelf": "linear-gradient(180deg, #8B4513 0%, #A0522D 50%, #6B3410 100%)",
         "parchment": "linear-gradient(180deg, #FFF8E7 0%, #F5E6D3 100%)",
       },

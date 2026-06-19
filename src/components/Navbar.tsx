@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Sparkles, Menu, X } from 'lucide-react';
+import { BookOpen, Search, Sparkles, Menu, X, Crown } from 'lucide-react';
 import { useStoryStore } from '@/store/storyStore';
 
 export default function Navbar() {
@@ -48,6 +48,13 @@ export default function Navbar() {
               故事书架
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
             </Link>
+            <Link
+              to="/characters"
+              className="font-body text-gray-700 hover:text-fairy-purple transition-colors duration-300 relative group"
+            >
+              角色大厅
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
+            </Link>
 
             <form onSubmit={handleSearch} className="relative">
               <input
@@ -88,6 +95,16 @@ export default function Navbar() {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               故事书架
+            </Link>
+            <Link
+              to="/characters"
+              className="block font-body text-gray-700 hover:text-fairy-purple transition-colors py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Crown className="w-4 h-4" />
+                角色大厅
+              </span>
             </Link>
             <form onSubmit={handleSearch} className="relative">
               <input

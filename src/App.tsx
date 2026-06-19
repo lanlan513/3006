@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from '@/pages/Home';
 import StoryList from '@/pages/StoryList';
 import StoryDetail from '@/pages/StoryDetail';
+import CharacterHall from '@/pages/CharacterHall';
+import CharacterDetail from '@/pages/CharacterDetail';
 
 export default function App() {
   return (
@@ -10,6 +12,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/stories" element={<StoryList />} />
         <Route path="/stories/:id" element={<StoryDetail />} />
+        <Route path="/characters" element={<CharacterHall />} />
+        <Route path="/characters/:id" element={<CharacterDetail />} />
       </Routes>
     </Router>
   );

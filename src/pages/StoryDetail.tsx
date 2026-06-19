@@ -12,6 +12,7 @@ import {
   Share2,
   Heart,
   Sparkles,
+  Check,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import StoryCard from '@/components/StoryCard';
@@ -22,11 +23,13 @@ export default function StoryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const stories = useStoryStore((state) => state.stories);
+  const toggleLike = useStoryStore((state) => state.toggleLike);
+  const isLiked = useStoryStore((state) => (id ? state.likedStories.has(id) : false));
   const story = useMemo(() => getStoryById(stories, id || ''), [stories, id]);
 
   const [currentPage, setCurrentPage] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
 
   useEffect(() => {
     setCurrentPage(0);
@@ -72,6 +75,35 @@ export default function StoryDetail() {
     const additional = stories.filter((s) => s.id !== story.id && !sameRegion.includes(s)).slice(0, 3 - sameRegion.length);
     return [...sameRegion, ...additional];
   }, [stories, story]);
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareTitle = `《${story.title}》- 童话图书馆`;
+    const shareText = `来读一读${story.region}经典童话故事《${story.title}》吧！`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          copyToClipboard(shareUrl);
+        }
+      }
+    } else {
+      copyToClipboard(shareUrl);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setShowShareToast(true);
+      setTimeout(() => setShowShareToast(false), 2000);
+    });
+  };
 
   return (
     <div className="min-h-screen relative">
@@ -154,9 +186,9 @@ export default function StoryDetail() {
 
                 <p className="text-gray-600 font-body leading-relaxed mb-6">{story.summary}</p>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3 relative">
                   <button
-                    onClick={() => setIsLiked(!isLiked)}
+                    onClick={() => id && toggleLike(id)}
                     className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-body transition-all duration-300 ${
                       isLiked
                         ? 'bg-red-500 text-white shadow-lg'
@@ -166,10 +198,20 @@ export default function StoryDetail() {
                     <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
                     {isLiked ? '已收藏' : '收藏故事'}
                   </button>
-                  <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/70 border border-fairy-purple/20 text-gray-600 font-body hover:border-fairy-purple hover:text-fairy-purple transition-colors">
+                  <button
+                    onClick={handleShare}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/70 border border-fairy-purple/20 text-gray-600 font-body hover:border-fairy-purple hover:text-fairy-purple transition-colors"
+                  >
                     <Share2 className="w-5 h-5" />
                     分享故事
                   </button>
+
+                  {showShareToast && (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-bounce-soft">
+                      <Check className="w-4 h-4" />
+                      <span className="font-body text-sm">链接已复制到剪贴板</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

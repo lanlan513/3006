@@ -1,14 +1,16 @@
-import { useMemo } from 'react';
-import type { InteractiveStory, StoryNode, EndingType } from '@/types';
+import { useMemo, useState } from 'react';
+import type { InteractiveStory, StoryNode, EndingType, EndingRoute } from '@/types';
 import { buildStoryTree } from '@/store/storyStore';
-import { X, GitBranch, Star, Sparkles, Heart, CloudRain, HelpCircle } from 'lucide-react';
+import { X, GitBranch, Star, Sparkles, Heart, CloudRain, HelpCircle, Route, Eye } from 'lucide-react';
 
 interface StoryTreeProps {
   interactiveStory: InteractiveStory;
   visitedNodes: string[];
   currentNodeId: string;
   discoveredEndings: string[];
+  endingRoutes: Record<string, EndingRoute>;
   onNodeClick?: (nodeId: string) => void;
+  onViewEndingPath?: (endingNodeId: string) => void;
   onClose: () => void;
 }
 
@@ -69,7 +71,9 @@ export default function StoryTree({
   visitedNodes,
   currentNodeId,
   discoveredEndings,
+  endingRoutes,
   onNodeClick,
+  onViewEndingPath,
   onClose,
 }: StoryTreeProps) {
   const treeData = useMemo(
@@ -222,11 +226,12 @@ export default function StoryTree({
                 const isEnding = node.type === 'ending';
                 const endingStyle = isEnding ? getEndingColor(node.endingType) : null;
                 const EndingIcon = endingStyle?.icon || Star;
+                const hasRoute = endingRoutes[nodeId];
 
                 return (
                   <div
                     key={nodeId}
-                    className={`absolute rounded-xl p-3 cursor-pointer transition-all duration-300 ${style.bg} ${style.border} ${style.shadow} ${style.scale} hover:scale-105 hover:shadow-lg`}
+                    className={`absolute rounded-xl p-3 cursor-pointer transition-all duration-300 group ${style.bg} ${style.border} ${style.shadow} ${style.scale} hover:scale-105 hover:shadow-lg`}
                     style={{
                       left: `${pos.x - minX}px`,
                       top: `${pos.y - minY}px`,
@@ -267,6 +272,18 @@ export default function StoryTree({
                       <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shadow-md">
                         <Star className="w-3 h-3 text-white fill-current" />
                       </div>
+                    )}
+                    {isEnding && hasRoute && (
+                      <button
+                        className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-white text-[10px] font-body flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md whitespace-nowrap ${endingStyle?.bg}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewEndingPath?.(nodeId);
+                        }}
+                      >
+                        <Route className="w-3 h-3" />
+                        查看路线
+                      </button>
                     )}
                   </div>
                 );

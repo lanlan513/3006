@@ -1,21 +1,40 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SearchBar from '@/components/SearchBar';
 import StoryCard from '@/components/StoryCard';
 import CharacterCard from '@/components/CharacterCard';
 import FloatingDecorations from '@/components/FloatingDecorations';
-import { useStoryStore, getHotStories } from '@/store/storyStore';
+import { useStoryStore, getHotStories, getInteractiveStoryByStoryId } from '@/store/storyStore';
 
 export default function Home() {
   const allStories = useStoryStore((state) => state.stories);
   const allCharacters = useStoryStore((state) => state.characters);
+  const interactiveStories = useStoryStore((state) => state.interactiveStories);
+  const storyProgress = useStoryStore((state) => state.storyProgress);
   const hotStories = useMemo(() => getHotStories(allStories), [allStories]);
   const featuredCharacters = useMemo(
     () => allCharacters.filter((c) => c.isProtagonist).slice(0, 4),
     [allCharacters]
   );
+
+  const interactiveStoriesWithData = useMemo(() => {
+    return interactiveStories
+      .map((is) => {
+        const story = allStories.find((s) => s.id === is.storyId);
+        const progress = storyProgress[is.id];
+        const endingCount = Object.values(is.nodes).filter((n) => n.type === 'ending').length;
+        return {
+          interactiveStory: is,
+          story,
+          progress,
+          endingCount,
+          foundCount: progress?.discoveredEndings.length || 0,
+        };
+      })
+      .filter((item) => item.story);
+  }, [interactiveStories, allStories, storyProgress]);
 
   const shelfBooks = allStories.slice(0, 7);
   const shelfBooksRow2 = allStories.slice(7, 10);
@@ -47,7 +66,14 @@ export default function Home() {
               <BookOpen className="w-5 h-5" />
               开始阅读
             </Link>
-            <Link to="/fairy-map" className="fairy-button inline-flex items-center gap-2">
+            <a href="#fate-chooser" className="fairy-button inline-flex items-center gap-2 relative overflow-hidden">
+              <Wand2 className="w-5 h-5" />
+              命运选择器
+              <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-gold to-orange-400 text-white text-[10px] rounded-full font-body font-bold shadow-md">
+                NEW
+              </span>
+            </a>
+            <Link to="/fairy-map" className="fairy-button-outline inline-flex items-center gap-2">
               <Globe className="w-5 h-5" />
               童话地图
             </Link>
@@ -59,6 +85,109 @@ export default function Home() {
               <BookMarked className="w-5 h-5" />
               浏览书架
             </a>
+          </div>
+        </section>
+
+        <section id="fate-chooser" className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-fairy flex items-center justify-center relative">
+                <GitBranch className="w-6 h-6 text-white" />
+                <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-gold to-orange-400 text-white text-[10px] rounded-full font-body font-bold shadow-md">
+                  NEW
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-fairy text-gray-800">童话命运选择器</h2>
+                <p className="text-sm text-gray-500 font-body">你的选择，决定故事的结局</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-fairy-purple/10 via-fairy-pink/5 to-fairy-gold/10 rounded-3xl p-6 md:p-8 mb-8 border border-fairy-purple/20">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-fairy flex items-center justify-center shadow-fairy flex-shrink-0">
+                <Wand2 className="w-10 h-10 md:w-12 md:h-12 text-white" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="font-fairy text-xl md:text-2xl text-gray-800 mb-2">
+                  改写经典童话，由你书写命运
+                </h3>
+                <p className="text-gray-600 font-body leading-relaxed">
+                  当灰姑娘面临舞会的邀请，当小红帽路遇森林中的大灰狼……
+                  你会做出怎样的选择？每一个决定都将开启全新的故事分支，
+                  探索不同的结局，解锁隐藏剧情，绘制属于你的童话命运地图！
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {interactiveStoriesWithData.map(({ interactiveStory, story, endingCount, foundCount, progress }) => (
+              <div key={interactiveStory.id} className="fairy-card p-5 group hover:shadow-fairy-lg transition-all duration-300">
+                <Link to={`/stories/${story.id}?mode=interactive`} className="block">
+                  <div className="flex gap-4">
+                    <div
+                      className="w-24 h-32 rounded-xl overflow-hidden flex-shrink-0 shadow-md group-hover:scale-105 transition-transform duration-300 relative"
+                      style={{ backgroundColor: story.coverColor }}
+                    >
+                      <img
+                        src={story.coverImage}
+                        alt={story.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-gradient-fairy text-white text-[10px] rounded-full font-body font-medium flex items-center gap-1 shadow-md">
+                        <Wand2 className="w-3 h-3" />
+                        互动
+                      </div>
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                      <h3 className="font-fairy text-lg text-gray-800 group-hover:text-fairy-purple transition-colors mb-1">
+                        {interactiveStory.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 font-body mb-2">
+                        作者：{story.author} · {story.region}
+                      </p>
+                      <p className="text-sm text-gray-600 font-body line-clamp-2 mb-3">
+                        {story.summary}
+                      </p>
+                      <div className="mt-auto">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-body text-gray-500">结局收集</span>
+                          <span className="text-xs font-body font-medium text-fairy-purple">
+                            {foundCount}/{endingCount}
+                          </span>
+                        </div>
+                        <div className="h-2 bg-fairy-purple/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-fairy transition-all duration-500 rounded-full"
+                            style={{ width: `${endingCount > 0 ? (foundCount / endingCount) * 100 : 0}%` }}
+                          />
+                        </div>
+                        {foundCount === 0 && (
+                          <p className="text-xs text-fairy-purple font-body mt-2 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            点击开始你的第一次探索！
+                          </p>
+                        )}
+                        {foundCount > 0 && foundCount < endingCount && (
+                          <p className="text-xs text-amber-600 font-body mt-2 flex items-center gap-1">
+                            <GitBranch className="w-3 h-3" />
+                            继续探索，发现更多结局
+                          </p>
+                        )}
+                        {foundCount === endingCount && (
+                          <p className="text-xs text-green-600 font-body mt-2 flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-current" />
+                            恭喜！已收集全部结局
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ))}
           </div>
         </section>
 

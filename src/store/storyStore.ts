@@ -1,5 +1,15 @@
 import { create } from 'zustand';
-import type { Story, Region, StoryCharacter, CharacterType, InteractiveStory, StoryProgress, UserChoiceRecord } from '@/types';
+import type {
+  Story,
+  Region,
+  StoryCharacter,
+  CharacterType,
+  InteractiveStory,
+  StoryProgress,
+  UserChoiceRecord,
+  EndingRoute,
+  EndingPathStep,
+} from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
 import { interactiveStories } from '@/data/interactiveStories';
@@ -22,7 +32,11 @@ interface StoryState {
   setCurrentNode: (interactiveStoryId: string, nodeId: string) => void;
   recordChoice: (interactiveStoryId: string, nodeId: string, choiceId: string) => void;
   addVisitedNode: (interactiveStoryId: string, nodeId: string) => void;
-  addDiscoveredEnding: (interactiveStoryId: string, endingNodeId: string) => void;
+  addDiscoveredEnding: (
+    interactiveStoryId: string,
+    endingNodeId: string,
+    route: EndingRoute
+  ) => void;
   resetStoryProgress: (interactiveStoryId: string, startNodeId: string) => void;
 }
 
@@ -65,6 +79,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
           visitedNodes: [startNodeId],
           choiceHistory: [],
           discoveredEndings: [],
+          endingRoutes: {},
         },
       },
     });
@@ -121,7 +136,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     });
   },
 
-  addDiscoveredEnding: (interactiveStoryId, endingNodeId) => {
+  addDiscoveredEnding: (interactiveStoryId, endingNodeId, route) => {
     const current = get().storyProgress;
     const progress = current[interactiveStoryId];
     if (!progress) return;
@@ -132,6 +147,10 @@ export const useStoryStore = create<StoryState>((set, get) => ({
         [interactiveStoryId]: {
           ...progress,
           discoveredEndings: [...progress.discoveredEndings, endingNodeId],
+          endingRoutes: {
+            ...progress.endingRoutes,
+            [endingNodeId]: route,
+          },
         },
       },
     });
@@ -142,6 +161,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const story = interactiveStories.find((s) => s.id === interactiveStoryId);
     if (!story) return;
     const existingDiscovered = current[interactiveStoryId]?.discoveredEndings || [];
+    const existingRoutes = current[interactiveStoryId]?.endingRoutes || {};
     set({
       storyProgress: {
         ...current,
@@ -151,6 +171,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
           visitedNodes: [startNodeId],
           choiceHistory: [],
           discoveredEndings: existingDiscovered,
+          endingRoutes: existingRoutes,
         },
       },
     });

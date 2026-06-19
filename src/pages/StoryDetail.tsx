@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Home,
   ChevronLeft,
@@ -20,19 +20,23 @@ import {
   Heart as HeartFilled,
   CloudRain,
   HelpCircle,
+  Route,
+  Trophy,
+  X,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import StoryCard from '@/components/StoryCard';
 import CharacterCard from '@/components/CharacterCard';
 import FloatingDecorations from '@/components/FloatingDecorations';
 import StoryTree from '@/components/StoryTree';
+import EndingPathViewer from '@/components/EndingPathViewer';
 import {
   useStoryStore,
   getStoryById,
   getCharactersByStoryId,
   getInteractiveStoryByStoryId,
 } from '@/store/storyStore';
-import type { StoryNode, EndingType } from '@/types';
+import type { StoryNode, EndingType, EndingRoute, EndingPathStep, StoryNodeType } from '@/types';
 
 type ReadingMode = 'classic' | 'interactive';
 
@@ -66,9 +70,50 @@ const getEndingGradient = (type?: EndingType) => {
   }
 };
 
+const getEndingStyle = (type?: EndingType) => {
+  switch (type) {
+    case 'happy':
+      return {
+        bg: 'bg-gradient-to-br from-pink-400 to-rose-500',
+        light: 'bg-pink-50 border-pink-200',
+        text: 'text-pink-600',
+        labelBg: 'bg-pink-100',
+      };
+    case 'sad':
+      return {
+        bg: 'bg-gradient-to-br from-blue-400 to-indigo-500',
+        light: 'bg-blue-50 border-blue-200',
+        text: 'text-blue-600',
+        labelBg: 'bg-blue-100',
+      };
+    case 'neutral':
+      return {
+        bg: 'bg-gradient-to-br from-gray-400 to-gray-500',
+        light: 'bg-gray-50 border-gray-200',
+        text: 'text-gray-600',
+        labelBg: 'bg-gray-100',
+      };
+    case 'secret':
+      return {
+        bg: 'bg-gradient-to-br from-amber-400 to-yellow-500',
+        light: 'bg-amber-50 border-amber-200',
+        text: 'text-amber-600',
+        labelBg: 'bg-amber-100',
+      };
+    default:
+      return {
+        bg: 'bg-gradient-to-br from-fairy-purple to-fairy-pink',
+        light: 'bg-purple-50 border-purple-200',
+        text: 'text-fairy-purple',
+        labelBg: 'bg-purple-100',
+      };
+  }
+};
+
 export default function StoryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const stories = useStoryStore((state) => state.stories);
   const allCharacters = useStoryStore((state) => state.characters);
   const interactiveStories = useStoryStore((state) => state.interactiveStories);
@@ -100,6 +145,9 @@ export default function StoryDetail() {
   const [showStoryTree, setShowStoryTree] = useState(false);
   const [showEndingModal, setShowEndingModal] = useState(false);
   const [endingNode, setEndingNode] = useState<StoryNode | null>(null);
+  const [showEndingPath, setShowEndingPath] = useState(false);
+  const [selectedEndingRoute, setSelectedEndingRoute] = useState<EndingRoute | null>(null);
+  const [showEndingCollection, setShowEndingCollection] = useState(false);
 
   const progress = interactiveStory ? storyProgress[interactiveStory.id] : undefined;
   const currentInteractiveNode = useMemo(() => {
@@ -109,12 +157,16 @@ export default function StoryDetail() {
 
   useEffect(() => {
     setCurrentPage(0);
-    setReadingMode('classic');
+    const modeParam = searchParams.get('mode');
+    setReadingMode(modeParam === 'interactive' && interactiveStory ? 'interactive' : 'classic');
     setShowStoryTree(false);
     setShowEndingModal(false);
     setEndingNode(null);
+    setShowEndingPath(false);
+    setSelectedEndingRoute(null);
+    setShowEndingCollection(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [id]);
+  }, [id, searchParams, interactiveStory]);
 
   useEffect(() => {
     if (interactiveStory && readingMode === 'interactive') {
@@ -169,12 +221,67 @@ export default function StoryDetail() {
 
     setIsAnimating(true);
     setTimeout(() => {
+      const prevNodeId = progress.currentNodeId;
+      const prevChoice = currentInteractiveNode.choices?.find((c) => c.id === choiceId);
+
       setCurrentNode(interactiveStory.id, nextNodeId);
       addVisitedNode(interactiveStory.id, nextNodeId);
 
       const nextNode = interactiveStory.nodes[nextNodeId];
       if (nextNode && nextNode.type === 'ending') {
-        addDiscoveredEnding(interactiveStory.id, nextNodeId);
+        const choiceHistoryForRoute = [...progress.choiceHistory];
+        choiceHistoryForRoute.push({
+          nodeId: prevNodeId,
+          choiceId,
+          timestamp: Date.now(),
+        });
+
+        const pathSteps: EndingPathStep[] = [];
+        let tempNodeId = interactiveStory.startNodeId;
+        let choiceIndex = 0;
+
+        while (tempNodeId) {
+          const node = interactiveStory.nodes[tempNodeId];
+          if (!node) break;
+
+          const choiceForNode = choiceHistoryForRoute.find(
+            (r, idx) => r.nodeId === tempNodeId && idx >= choiceIndex
+          );
+
+          if (choiceForNode) {
+            const choiceIdx = choiceHistoryForRoute.indexOf(choiceForNode);
+            choiceIndex = choiceIdx + 1;
+            const choice = node.choices?.find((c) => c.id === choiceForNode.choiceId);
+            pathSteps.push({
+              nodeId: tempNodeId,
+              nodeContent: node.content,
+              choiceId: choiceForNode.choiceId,
+              choiceText: choice?.text || null,
+            });
+            tempNodeId = choice?.nextNodeId || '';
+          } else {
+            if (tempNodeId === nextNodeId) {
+              pathSteps.push({
+                nodeId: tempNodeId,
+                nodeContent: node.content,
+                choiceId: null,
+                choiceText: null,
+              });
+            }
+            break;
+          }
+        }
+
+        const route: EndingRoute = {
+          endingNodeId: nextNodeId,
+          endingTitle: nextNode.endingTitle || '结局',
+          endingType: nextNode.endingType || 'neutral',
+          endingContent: nextNode.content,
+          path: pathSteps,
+          discoveredAt: Date.now(),
+        };
+
+        addDiscoveredEnding(interactiveStory.id, nextNodeId, route);
         setEndingNode(nextNode);
         setTimeout(() => setShowEndingModal(true), 400);
       }
@@ -182,6 +289,15 @@ export default function StoryDetail() {
       setIsAnimating(false);
       window.scrollTo({ top: 300, behavior: 'smooth' });
     }, 300);
+  };
+
+  const handleViewEndingPath = (endingNodeId: string) => {
+    if (!progress) return;
+    const route = progress.endingRoutes[endingNodeId];
+    if (route) {
+      setSelectedEndingRoute(route);
+      setShowEndingPath(true);
+    }
   };
 
   const handleRestartStory = () => {
@@ -469,7 +585,18 @@ export default function StoryDetail() {
                       已探索 {progress.visitedNodes.length} 个节点 · 发现 {progress.discoveredEndings.length} 个结局
                     </p>
                   </div>
-                  <div className="ml-auto flex gap-2">
+                  <div className="ml-auto flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setShowEndingCollection(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 border border-fairy-purple/30 text-fairy-purple font-body text-sm hover:bg-fairy-purple hover:text-white transition-all duration-300"
+                    >
+                      <Trophy className="w-4 h-4" />
+                      结局收集
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full bg-fairy-purple text-white text-[10px] font-bold">
+                        {progress.discoveredEndings.length}/
+                        {Object.values(interactiveStory.nodes).filter((n) => n.type === 'ending').length}
+                      </span>
+                    </button>
                     <button
                       onClick={() => setShowStoryTree(true)}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 border border-fairy-purple/30 text-fairy-purple font-body text-sm hover:bg-fairy-purple hover:text-white transition-all duration-300"
@@ -623,7 +750,9 @@ export default function StoryDetail() {
           visitedNodes={progress.visitedNodes}
           currentNodeId={progress.currentNodeId}
           discoveredEndings={progress.discoveredEndings}
+          endingRoutes={progress.endingRoutes}
           onNodeClick={handleTreeNodeClick}
+          onViewEndingPath={handleViewEndingPath}
           onClose={() => setShowStoryTree(false)}
         />
       )}
@@ -680,6 +809,13 @@ export default function StoryDetail() {
                   再次探索
                 </button>
                 <button
+                  onClick={() => handleViewEndingPath(endingNode.id)}
+                  className="fairy-button-outline inline-flex items-center gap-2"
+                >
+                  <Route className="w-5 h-5" />
+                  查看选择路线
+                </button>
+                <button
                   onClick={() => {
                     setShowEndingModal(false);
                     setShowStoryTree(true);
@@ -696,6 +832,151 @@ export default function StoryDetail() {
                 className="mt-4 text-gray-500 font-body text-sm hover:text-fairy-purple transition-colors"
               >
                 关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEndingPath && selectedEndingRoute && (
+        <EndingPathViewer
+          endingRoute={selectedEndingRoute}
+          storyTitle={interactiveStory?.title || story.title}
+          onClose={() => {
+            setShowEndingPath(false);
+            setSelectedEndingRoute(null);
+          }}
+        />
+      )}
+
+      {showEndingCollection && interactiveStory && progress && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fairy-card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-fairy-purple/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-fairy text-gray-800">结局收集册</h3>
+                  <p className="text-sm text-gray-500 font-body">
+                    已收集 {progress.discoveredEndings.length}/
+                    {Object.values(interactiveStory.nodes).filter((n) => n.type === 'ending').length} 个结局
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEndingCollection(false)}
+                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-2 bg-gradient-to-r from-fairy-purple/5 via-fairy-pink/5 to-fairy-gold/5">
+              <div className="h-2 bg-white/70 rounded-full overflow-hidden mx-2">
+                <div
+                  className="h-full bg-gradient-fairy transition-all duration-500 rounded-full"
+                  style={{
+                    width: `${
+                      Object.values(interactiveStory.nodes).filter((n) => n.type === 'ending').length > 0
+                        ? (progress.discoveredEndings.length /
+                            Object.values(interactiveStory.nodes).filter((n) => n.type === 'ending').length) *
+                          100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {Object.values(interactiveStory.nodes)
+                  .filter((n) => n.type === 'ending')
+                  .map((endingNode) => {
+                    const isDiscovered = progress.discoveredEndings.includes(endingNode.id);
+                    const route = progress.endingRoutes[endingNode.id];
+                    const style = getEndingStyle(endingNode.endingType);
+                    const EndingIcon = getEndingIcon(endingNode.endingType);
+
+                    return (
+                      <div
+                        key={endingNode.id}
+                        className={`rounded-2xl border-2 p-4 transition-all duration-300 ${
+                          isDiscovered
+                            ? `${style.light} hover:shadow-lg cursor-pointer`
+                            : 'bg-gray-50 border-gray-200 border-dashed'
+                        }`}
+                        onClick={() => {
+                          if (route) {
+                            setShowEndingCollection(false);
+                            setSelectedEndingRoute(route);
+                            setShowEndingPath(true);
+                          }
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              isDiscovered ? style.bg : 'bg-gray-200'
+                            }`}
+                          >
+                            {isDiscovered ? (
+                              <EndingIcon className="w-6 h-6 text-white" />
+                            ) : (
+                              <HelpCircle className="w-6 h-6 text-gray-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {isDiscovered ? (
+                              <>
+                                <div
+                                  className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-body font-medium mb-1 ${style.labelBg} ${style.text}`}
+                                >
+                                  {endingNode.endingType === 'happy' && '快乐结局'}
+                                  {endingNode.endingType === 'sad' && '悲伤结局'}
+                                  {endingNode.endingType === 'neutral' && '普通结局'}
+                                  {endingNode.endingType === 'secret' && '隐藏结局'}
+                                </div>
+                                <h4 className="font-fairy text-base text-gray-800 mb-1">
+                                  {endingNode.endingTitle}
+                                </h4>
+                                <p className="text-xs text-gray-500 font-body line-clamp-2">
+                                  {endingNode.content}
+                                </p>
+                                {route && (
+                                  <div className="mt-2 flex items-center gap-1 text-[11px] font-body text-fairy-purple">
+                                    <Route className="w-3 h-3" />
+                                    点击查看选择路线
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <div className="inline-block px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[10px] font-body font-medium mb-1">
+                                  未解锁
+                                </div>
+                                <h4 className="font-fairy text-base text-gray-400 mb-1">???</h4>
+                                <p className="text-xs text-gray-400 font-body">
+                                  继续探索故事来解锁这个结局
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-fairy-purple/10 bg-fairy-purple/5 text-center">
+              <button
+                onClick={() => setShowEndingCollection(false)}
+                className="fairy-button-outline inline-flex items-center gap-2"
+              >
+                继续探索故事
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { MapPin, User, Flame } from 'lucide-react';
+import { MapPin, User, Flame, Wand2 } from 'lucide-react';
 import type { Story } from '@/types';
+import { useStoryStore, getInteractiveStoryByStoryId } from '@/store/storyStore';
 
 interface StoryCardProps {
   story: Story;
@@ -8,6 +9,8 @@ interface StoryCardProps {
 }
 
 export default function StoryCard({ story, variant = 'default' }: StoryCardProps) {
+  const interactiveStories = useStoryStore((state) => state.interactiveStories);
+  const hasInteractiveMode = getInteractiveStoryByStoryId(interactiveStories, story.id) !== undefined;
   if (variant === 'shelf') {
     return (
       <Link to={`/stories/${story.id}`} className="story-book group">
@@ -26,6 +29,12 @@ export default function StoryCard({ story, variant = 'default' }: StoryCardProps
             {story.isHot && (
               <div className="absolute top-2 right-2">
                 <Flame className="w-4 h-4 text-fairy-gold drop-shadow-lg animate-bounce-soft" />
+              </div>
+            )}
+            {hasInteractiveMode && (
+              <div className="absolute top-2 left-4 px-1.5 py-0.5 bg-gradient-fairy text-white text-[9px] rounded-full font-body font-medium flex items-center gap-0.5 shadow-md">
+                <Wand2 className="w-2.5 h-2.5" />
+                互动
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -51,9 +60,17 @@ export default function StoryCard({ story, variant = 'default' }: StoryCardProps
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-fairy text-lg text-gray-800 group-hover:text-fairy-purple transition-colors line-clamp-1">
-              {story.title}
-            </h3>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h3 className="font-fairy text-lg text-gray-800 group-hover:text-fairy-purple transition-colors line-clamp-1">
+                {story.title}
+              </h3>
+              {hasInteractiveMode && (
+                <span className="flex-shrink-0 px-1.5 py-0.5 bg-gradient-fairy text-white text-[9px] rounded-full font-body font-medium flex items-center gap-0.5">
+                  <Wand2 className="w-2.5 h-2.5" />
+                  互动
+                </span>
+              )}
+            </div>
             {story.isHot && <Flame className="w-4 h-4 text-fairy-gold flex-shrink-0 animate-bounce-soft" />}
           </div>
           <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
@@ -90,6 +107,12 @@ export default function StoryCard({ story, variant = 'default' }: StoryCardProps
           <div className="absolute top-3 right-3 bg-fairy-gold/90 text-white px-3 py-1 rounded-full text-xs font-body font-medium flex items-center gap-1 shadow-lg">
             <Flame className="w-3 h-3" />
             热门
+          </div>
+        )}
+        {hasInteractiveMode && (
+          <div className="absolute top-3 left-3 bg-gradient-fairy text-white px-2.5 py-1 rounded-full text-[10px] font-body font-medium flex items-center gap-1 shadow-lg">
+            <Wand2 className="w-3 h-3" />
+            命运选择器
           </div>
         )}
         <div className="absolute bottom-3 left-3 right-3">

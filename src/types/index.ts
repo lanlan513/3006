@@ -100,12 +100,29 @@ export interface UserChoiceRecord {
   timestamp: number;
 }
 
+export interface EndingPathStep {
+  nodeId: string;
+  nodeContent: string;
+  choiceId: string | null;
+  choiceText: string | null;
+}
+
+export interface EndingRoute {
+  endingNodeId: string;
+  endingTitle: string;
+  endingType: EndingType;
+  endingContent: string;
+  path: EndingPathStep[];
+  discoveredAt: number;
+}
+
 export interface StoryProgress {
   storyId: string;
   currentNodeId: string;
   visitedNodes: string[];
   choiceHistory: UserChoiceRecord[];
   discoveredEndings: string[];
+  endingRoutes: Record<string, EndingRoute>;
 }
 
 export interface TreeNodeData {

@@ -937,3 +937,121 @@ export interface DreamEvolutionTrigger {
 export type DayNightPhase = 'dawn' | 'day' | 'dusk' | 'night';
 
 export type DreamTab = 'overview' | 'map' | 'wishes' | 'fears' | 'memories' | 'character-select';
+
+export type HistoricalEra =
+  | '创世纪元'
+  | '黄金时代'
+  | '英雄时代'
+  | '王国时代'
+  | '魔法复兴'
+  | '近代';
+
+export const HISTORICAL_ERAS: HistoricalEra[] = [
+  '创世纪元',
+  '黄金时代',
+  '英雄时代',
+  '王国时代',
+  '魔法复兴',
+  '近代',
+];
+
+export type HistoricalEventType =
+  | '王国兴衰'
+  | '英雄诞生'
+  | '怪物入侵'
+  | '魔法发现'
+  | '战争冲突'
+  | '和平条约'
+  | '自然灾害'
+  | '文化繁荣'
+  | '神器出世'
+  | '重要婚礼';
+
+export const HISTORICAL_EVENT_TYPES: HistoricalEventType[] = [
+  '王国兴衰',
+  '英雄诞生',
+  '怪物入侵',
+  '魔法发现',
+  '战争冲突',
+  '和平条约',
+  '自然灾害',
+  '文化繁荣',
+  '神器出世',
+  '重要婚礼',
+];
+
+export const EVENT_TYPE_ICONS: Record<HistoricalEventType, string> = {
+  '王国兴衰': '🏰',
+  '英雄诞生': '⚔️',
+  '怪物入侵': '🐉',
+  '魔法发现': '✨',
+  '战争冲突': '🗡️',
+  '和平条约': '🕊️',
+  '自然灾害': '🌋',
+  '文化繁荣': '📚',
+  '神器出世': '💎',
+  '重要婚礼': '💒',
+};
+
+export const EVENT_TYPE_COLORS: Record<HistoricalEventType, { bg: string; border: string; text: string }> = {
+  '王国兴衰': { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-700' },
+  '英雄诞生': { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700' },
+  '怪物入侵': { bg: 'bg-red-100', border: 'border-red-300', text: 'text-red-700' },
+  '魔法发现': { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-700' },
+  '战争冲突': { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700' },
+  '和平条约': { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-700' },
+  '自然灾害': { bg: 'bg-gray-100', border: 'border-gray-300', text: 'text-gray-700' },
+  '文化繁荣': { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-700' },
+  '神器出世': { bg: 'bg-yellow-100', border: 'border-yellow-300', text: 'text-yellow-700' },
+  '重要婚礼': { bg: 'bg-rose-100', border: 'border-rose-300', text: 'text-rose-700' },
+};
+
+export interface HistoricalFigure {
+  id: string;
+  name: string;
+  title?: string;
+  role: string;
+  description: string;
+  era: HistoricalEra;
+  region: Region;
+  isProtagonist?: boolean;
+  isVillain?: boolean;
+  relatedStories: string[];
+  achievements: string[];
+  birthYear: number;
+  deathYear?: number;
+  portraitEmoji: string;
+}
+
+export interface HistoricalEvent {
+  id: string;
+  title: string;
+  type: HistoricalEventType;
+  era: HistoricalEra;
+  year: number;
+  region: Region;
+  location: string;
+  description: string;
+  detailedContent: string[];
+  participants: HistoricalFigure[];
+  consequences: string[];
+  relatedStories: string[];
+  importance: 'minor' | 'moderate' | 'major' | 'catastrophic';
+  coverEmoji: string;
+  coverColor: string;
+  isVerified: boolean;
+  sources: string[];
+}
+
+export type HistoryArchiveTab = 'timeline' | 'events' | 'figures' | 'eras';
+
+export interface EraSummary {
+  era: HistoricalEra;
+  eraEmoji: string;
+  startYear: number;
+  endYear: number;
+  description: string;
+  majorEvents: string[];
+  keyFigures: string[];
+  characteristics: string[];
+}

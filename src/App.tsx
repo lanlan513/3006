@@ -13,6 +13,7 @@ import FairyAcademy from '@/pages/FairyAcademy';
 import CourseDetail from '@/pages/CourseDetail';
 import CosmicEvents from '@/pages/CosmicEvents';
 import DreamWorld from '@/pages/DreamWorld';
+import HistoryArchive from '@/pages/HistoryArchive';
 import { useStoryStore } from '@/store/storyStore';
 
 const DAY_NIGHT_INTERVAL_MS = 60000;
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/academy/:id" element={<CourseDetail />} />
         <Route path="/cosmic-events" element={<CosmicEvents />} />
         <Route path="/dream-world" element={<DreamWorld />} />
+        <Route path="/history-archive" element={<HistoryArchive />} />
       </Routes>
     </Router>
   );

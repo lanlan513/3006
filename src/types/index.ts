@@ -1230,3 +1230,195 @@ export const DECIPHER_TABS: { id: DecipherTab; label: string; icon: string }[] =
   { id: 'steles', label: '古代石碑', icon: '🗿' },
   { id: 'puzzles', label: '解谜', icon: '🧩' },
 ];
+
+export type StationType = '普通车站' | '枢纽车站' | '魔法车站' | '边境车站' | '终点站';
+
+export const STATION_TYPES: StationType[] = ['普通车站', '枢纽车站', '魔法车站', '边境车站', '终点站'];
+
+export type TrainType = '蒸汽列车' | '魔法快车' | '资源运输' | '皇家专列' | '梦幻列车';
+
+export const TRAIN_TYPES: TrainType[] = ['蒸汽列车', '魔法快车', '资源运输', '梦幻列车'];
+
+export type ResourceType = '旅客' | '魔法晶石' | '故事素材' | '魔法材料' | '稀有矿石' | '魔法道具' | '食物' | '魔法书籍';
+
+export const RESOURCE_TYPES: ResourceType[] = ['旅客', '魔法晶石', '故事素材', '魔法材料', '稀有矿石', '魔法道具', '食物', '魔法书籍'];
+
+export type RailwayEventType = 
+  | '奇遇'
+  | '故事触发'
+  | '资源奖励'
+  | '角色相遇'
+  | '天气影响'
+  | '神秘事件'
+  | '支线任务'
+  | '意外延迟'
+  | '发现秘密'
+  | '魔法故障';
+
+export const RAILWAY_EVENT_TYPES: RailwayEventType[] = [
+  '奇遇', '故事触发', '资源奖励', '角色相遇',
+  '天气影响', '神秘事件', '支线任务', '意外延迟', '发现秘密', '魔法故障'
+];
+
+export interface RailwayStation {
+  id: string;
+  name: string;
+  type: StationType;
+  region: Region;
+  x: number;
+  y: number;
+  color: string;
+  description: string;
+  icon: string;
+  level: number;
+  capacity: number;
+  built: boolean;
+  buildCost: number;
+  connectedStationIds: string[];
+  specialFeature?: string;
+  unlocked?: boolean;
+  unlockCondition?: string;
+  storyIds?: string[];
+  characterIds?: string[];
+}
+
+export interface MagicTrain {
+  id: string;
+  name: string;
+  type: TrainType;
+  emoji: string;
+  color: string;
+  speed: number;
+  capacity: number;
+  currentStationId: string;
+  nextStationId?: string;
+  cargo: {
+    resourceType: ResourceType;
+    amount: number;
+  }[];
+  passengers: {
+    characterId?: string;
+    name: string;
+    emoji: string;
+  }[];
+  status: '停靠' | '行驶中' | '维修中' | '待机';
+  departureTime?: number;
+  arrivalTime?: number;
+  routeId?: string;
+}
+
+export interface RailwayRoute {
+  id: string;
+  name: string;
+  startStationId: string;
+  endStationId: string;
+  distance: number;
+  travelTime: number;
+  built: boolean;
+  buildCost: number;
+  color: string;
+  unlockCondition?: string;
+  eventChance: number;
+  storyId?: string;
+}
+
+export interface RailwayEvent {
+  id: string;
+  name: string;
+  type: RailwayEventType;
+  title: string;
+  description: string;
+  emoji: string;
+  routeIds?: string[];
+  stationIds?: string[];
+  region?: Region | '全部';
+  triggerCondition?: string;
+  rewards: {
+    type: '资源' | '故事' | '经验' | '道具' | '角色';
+    item?: string;
+    amount?: number;
+    storyId?: string;
+    characterId?: string;
+    itemId?: string;
+  }[];
+  choices?: {
+    id: string;
+    text: string;
+    outcome: string;
+  }[];
+  cooldown: number;
+  lastTriggered?: number;
+}
+
+export interface ActiveRailwayEvent {
+  eventId: string;
+  routeId: string;
+  trainId: string;
+  startTime: number;
+  status: 'active' | 'resolved';
+  choices?: string;
+  resolvedAt?: number;
+}
+
+export interface RailwayProgress {
+  builtStations: Set<string>;
+  builtRoutes: Set<string>;
+  trains: MagicTrain[];
+  resources: Record<ResourceType, number>;
+  magicCrystals: number;
+  experience: number;
+  level: number;
+  activeEvents: ActiveRailwayEvent[];
+  eventHistory: {
+    eventId: string;
+    timestamp: number;
+    outcome: string;
+  }[];
+  stationUpgrades: Record<string, number>;
+  discoveredSecrets: Set<string>;
+  encounteredCharacters: Set<string>;
+  completedSideStories: Set<string>;
+  totalPassengersTransported: number;
+  totalResourcesTransported: number;
+}
+
+export type RailwayTab = 'map' | 'stations' | 'trains' | 'events' | 'resources' | 'build';
+
+export const RAILWAY_TABS: { id: RailwayTab; label: string; icon: string }[] = [
+  { id: 'map', label: '铁路地图', icon: '🗺️' },
+  { id: 'stations', label: '车站管理', icon: '🏰' },
+  { id: 'trains', label: '列车调度', icon: '🚂' },
+  { id: 'events', label: '事件记录', icon: '✨' },
+  { id: 'resources', label: '资源仓库', icon: '📦' },
+  { id: 'build', label: '建设规划', icon: '🔨' },
+];
+
+export interface BuildOption {
+  type: 'station' | 'route';
+  targetId: string;
+  cost: number;
+  requirements?: string[];
+}
+
+export interface TrainSchedule {
+  trainId: string;
+  routeId: string;
+  departureTime: number;
+  autoRepeat: boolean;
+}
+
+export interface TransportLog {
+  id: string;
+  trainId: string;
+  routeId: string;
+  startTime: number;
+  endTime: number;
+  cargo: {
+    resourceType: ResourceType;
+    amount: number;
+  }[];
+  passengers: string[];
+  eventTriggered?: string;
+  rewards?: string;
+}
+

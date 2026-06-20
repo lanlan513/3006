@@ -87,6 +87,31 @@ import {
   getPuzzlesByRace,
   getStelesByRace,
 } from '@/data/languages';
+import {
+  RAILWAY_STATIONS,
+  RAILWAY_ROUTES,
+  RAILWAY_EVENTS,
+  INITIAL_TRAINS,
+  INITIAL_RESOURCES,
+  getStationById,
+  getRouteById,
+  getEventById,
+  canBuildStation,
+  canBuildRoute,
+  getBuiltStations,
+  getBuiltRoutes,
+} from '@/data/railway';
+import type {
+  RailwayStation,
+  RailwayRoute,
+  MagicTrain,
+  RailwayEvent,
+  RailwayProgress,
+  ActiveRailwayEvent,
+  RailwayTab,
+  ResourceType,
+  TransportLog,
+} from '@/types';
 
 interface StoryState {
   stories: Story[];
@@ -266,6 +291,46 @@ interface StoryState {
   setCurrentPuzzle: (puzzle: WordPuzzle | null) => void;
   setCurrentStele: (stele: AncientStele | null) => void;
   canTranslateStele: (steleId: string) => boolean;
+  railwayStations: RailwayStation[];
+  railwayRoutes: RailwayRoute[];
+  railwayEvents: RailwayEvent[];
+  railwayProgress: RailwayProgress;
+  selectedRailwayTab: RailwayTab;
+  selectedTrainId: string | null;
+  selectedRouteId: string | null;
+  currentRailwayEvent: ActiveRailwayEvent | null;
+  transportLogs: TransportLog[];
+  railwayLevel: number;
+  railwayExperience: number;
+  autoAdvanceTrains: boolean;
+  setSelectedRailwayTab: (tab: RailwayTab) => void;
+  setSelectedTrainId: (id: string | null) => void;
+  setSelectedRouteId: (id: string | null) => void;
+  buildStation: (stationId: string) => boolean;
+  buildRoute: (routeId: string) => boolean;
+  upgradeStation: (stationId: string) => boolean;
+  startTrain: (trainId: string, routeId: string) => boolean;
+  completeTrainJourney: (trainId: string) => void;
+  triggerRailwayEvent: (trainId: string, routeId: string) => void;
+  resolveRailwayEvent: (eventId: string, choiceId?: string) => void;
+  closeRailwayEvent: () => void;
+  addRailwayExperience: (amount: number) => void;
+  levelUpRailway: () => void;
+  addResource: (type: ResourceType, amount: number) => void;
+  removeResource: (type: ResourceType, amount: number) => boolean;
+  getBuiltStations: () => RailwayStation[];
+  getBuiltRoutes: () => RailwayRoute[];
+  getAvailableRoutesForStation: (stationId: string) => RailwayRoute[];
+  getAvailableEvents: (routeId: string, weather: string, timeOfDay: string) => RailwayEvent[];
+  setAutoAdvanceTrains: (enabled: boolean) => void;
+  updateTrainPosition: (trainId: string, progress: number) => void;
+  repairTrain: (trainId: string) => void;
+  addTransportLog: (log: Omit<TransportLog, 'id'>) => void;
+  getTotalTransportedPassengers: () => number;
+  getTotalTransportedResources: () => number;
+  getRailwayLevel: () => number;
+  canBuildStation: (stationId: string) => boolean;
+  canBuildRoute: (routeId: string) => boolean;
 }
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -911,6 +976,483 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const hasAllWords = stele.requiredWords.every((wordId) => state.unlockedLanguageWords[wordId]);
     const hasAllGrammar = stele.requiredGrammar.every((grammarId) => state.unlockedLanguageGrammar[grammarId]);
     return hasAllWords && hasAllGrammar;
+  },
+
+  railwayStations: RAILWAY_STATIONS,
+  railwayRoutes: RAILWAY_ROUTES,
+  railwayEvents: RAILWAY_EVENTS,
+  railwayProgress: {
+    builtStations: new Set(RAILWAY_STATIONS.filter(s => s.built).map(s => s.id)),
+    builtRoutes: new Set(RAILWAY_ROUTES.filter(r => r.built).map(r => r.id)),
+    trains: INITIAL_TRAINS,
+    resources: { ...INITIAL_RESOURCES },
+    magicCrystals: 100,
+    experience: 0,
+    level: 1,
+    activeEvents: [],
+    eventHistory: [],
+    stationUpgrades: {},
+    discoveredSecrets: new Set(),
+    encounteredCharacters: new Set(),
+    completedSideStories: new Set(),
+    totalPassengersTransported: 0,
+    totalResourcesTransported: 0,
+  },
+  selectedRailwayTab: 'map',
+  selectedTrainId: null,
+  selectedRouteId: null,
+  currentRailwayEvent: null,
+  transportLogs: [],
+  railwayLevel: 1,
+  railwayExperience: 0,
+  autoAdvanceTrains: false,
+
+  setSelectedRailwayTab: (tab) => set({ selectedRailwayTab: tab }),
+  setSelectedTrainId: (id) => set({ selectedTrainId: id }),
+  setSelectedRouteId: (id) => set({ selectedRouteId: id }),
+
+  canBuildStation: (stationId) => {
+    const state = get();
+    return canBuildStation(stationId, state.railwayProgress.magicCrystals, state.railwayProgress.builtStations);
+  },
+
+  canBuildRoute: (routeId) => {
+    const state = get();
+    return canBuildRoute(routeId, state.railwayProgress.magicCrystals, state.railwayProgress.builtRoutes, state.railwayProgress.builtStations);
+  },
+
+  buildStation: (stationId) => {
+    const state = get();
+    const station = getStationById(stationId);
+    if (!station) return false;
+    if (!state.canBuildStation(stationId)) return false;
+
+    const newBuiltStations = new Set(state.railwayProgress.builtStations);
+    newBuiltStations.add(stationId);
+    const newCrystals = state.railwayProgress.magicCrystals - station.buildCost;
+
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        builtStations: newBuiltStations,
+        magicCrystals: newCrystals,
+      },
+    });
+
+    state.addRailwayExperience(50);
+    return true;
+  },
+
+  buildRoute: (routeId) => {
+    const state = get();
+    const route = getRouteById(routeId);
+    if (!route) return false;
+    if (!state.canBuildRoute(routeId)) return false;
+
+    const newBuiltRoutes = new Set(state.railwayProgress.builtRoutes);
+    newBuiltRoutes.add(routeId);
+    const newCrystals = state.railwayProgress.magicCrystals - route.buildCost;
+
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        builtRoutes: newBuiltRoutes,
+        magicCrystals: newCrystals,
+      },
+    });
+
+    state.addRailwayExperience(30);
+    return true;
+  },
+
+  upgradeStation: (stationId) => {
+    const state = get();
+    const station = getStationById(stationId);
+    if (!station) return false;
+    if (!state.railwayProgress.builtStations.has(stationId) && !station.built) return false;
+
+    const currentLevel = state.railwayProgress.stationUpgrades[stationId] || 1;
+    const upgradeCost = station.buildCost * currentLevel * 0.5;
+    
+    if (state.railwayProgress.magicCrystals < upgradeCost) return false;
+
+    const newUpgrades = { ...state.railwayProgress.stationUpgrades };
+    newUpgrades[stationId] = currentLevel + 1;
+
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        stationUpgrades: newUpgrades,
+        magicCrystals: state.railwayProgress.magicCrystals - upgradeCost,
+      },
+    });
+
+    state.addRailwayExperience(80);
+    return true;
+  },
+
+  startTrain: (trainId, routeId) => {
+    const state = get();
+    const train = state.railwayProgress.trains.find(t => t.id === trainId);
+    const route = getRouteById(routeId);
+    
+    if (!train || !route) return false;
+    if (train.status !== '停靠') return false;
+    if (!state.railwayProgress.builtRoutes.has(routeId) && !route.built) return false;
+
+    const startStation = getStationById(route.startStationId);
+    const endStation = getStationById(route.endStationId);
+    if (!startStation || !endStation) return false;
+
+    const isAtStart = train.currentStationId === route.startStationId;
+    const actualStart = isAtStart ? route.startStationId : route.endStationId;
+    const actualEnd = isAtStart ? route.endStationId : route.startStationId;
+
+    const updatedTrains = state.railwayProgress.trains.map(t => {
+      if (t.id === trainId) {
+        return {
+          ...t,
+          status: '行驶中' as const,
+          nextStationId: actualEnd,
+          departureTime: Date.now(),
+          arrivalTime: Date.now() + route.travelTime * 1000,
+          routeId,
+        };
+      }
+      return t;
+    });
+
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        trains: updatedTrains,
+      },
+    });
+
+    setTimeout(() => {
+      if (Math.random() < route.eventChance) {
+        state.triggerRailwayEvent(trainId, routeId);
+      }
+    }, route.travelTime * 500);
+
+    return true;
+  },
+
+  completeTrainJourney: (trainId) => {
+    const state = get();
+    const train = state.railwayProgress.trains.find(t => t.id === trainId);
+    if (!train || train.status !== '行驶中' || !train.routeId || !train.nextStationId) return;
+
+    const route = getRouteById(train.routeId);
+    if (!route) return;
+
+    const passengerCount = train.passengers.length;
+    const cargoTotal = train.cargo.reduce((sum, c) => sum + c.amount, 0);
+
+    const updatedTrains = state.railwayProgress.trains.map(t => {
+      if (t.id === trainId) {
+        return {
+          ...t,
+          currentStationId: train.nextStationId!,
+          nextStationId: undefined,
+          status: '停靠' as const,
+          departureTime: undefined,
+          arrivalTime: undefined,
+          routeId: undefined,
+        };
+      }
+      return t;
+    });
+
+    const newResources = { ...state.railwayProgress.resources };
+    train.cargo.forEach(c => {
+      newResources[c.resourceType] = (newResources[c.resourceType] || 0) + c.amount;
+    });
+
+    const log: Omit<TransportLog, 'id'> = {
+      trainId,
+      routeId: train.routeId,
+      startTime: train.departureTime || Date.now(),
+      endTime: Date.now(),
+      cargo: [...train.cargo],
+      passengers: train.passengers.map(p => p.name),
+    };
+
+    state.addTransportLog(log);
+
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        trains: updatedTrains,
+        resources: newResources,
+        totalPassengersTransported: state.railwayProgress.totalPassengersTransported + passengerCount,
+        totalResourcesTransported: state.railwayProgress.totalResourcesTransported + cargoTotal,
+      },
+    });
+
+    state.addRailwayExperience(Math.floor(route.distance / 10) + passengerCount * 5);
+  },
+
+  triggerRailwayEvent: (trainId, routeId) => {
+    const state = get();
+    const route = getRouteById(routeId);
+    if (!route) return;
+
+    const currentWeather = state.currentGlobalWeather;
+    const timeOfDay = state.dayNightPhase;
+
+    const availableEvents = state.getAvailableEvents(routeId, currentWeather, timeOfDay);
+    if (availableEvents.length === 0) return;
+
+    const randomEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+    
+    const activeEvent: ActiveRailwayEvent = {
+      eventId: randomEvent.id,
+      routeId,
+      trainId,
+      startTime: Date.now(),
+      status: 'active',
+    };
+
+    set({
+      currentRailwayEvent: activeEvent,
+      railwayProgress: {
+        ...state.railwayProgress,
+        activeEvents: [...state.railwayProgress.activeEvents, activeEvent],
+      },
+    });
+  },
+
+  resolveRailwayEvent: (eventId, choiceId) => {
+    const state = get();
+    const event = getEventById(eventId);
+    if (!event) return;
+
+    const activeEvent = state.railwayProgress.activeEvents.find(e => e.eventId === eventId);
+    if (!activeEvent) return;
+
+    let outcome = '';
+    if (event.choices && choiceId) {
+      const choice = event.choices.find(c => c.id === choiceId);
+      if (choice) {
+        outcome = choice.outcome;
+      }
+    }
+
+    event.rewards.forEach(reward => {
+      if (reward.type === '资源' && reward.item && reward.amount) {
+        state.addResource(reward.item as ResourceType, reward.amount);
+      } else if (reward.type === '经验' && reward.amount) {
+        state.addRailwayExperience(reward.amount);
+      } else if (reward.type === '故事' && reward.storyId) {
+        const newCompleted = new Set(state.railwayProgress.completedSideStories);
+        newCompleted.add(reward.storyId);
+        set({
+          railwayProgress: {
+            ...state.railwayProgress,
+            completedSideStories: newCompleted,
+          },
+        });
+      } else if (reward.type === '角色' && reward.characterId) {
+        const newEncountered = new Set(state.railwayProgress.encounteredCharacters);
+        newEncountered.add(reward.characterId);
+        set({
+          railwayProgress: {
+            ...state.railwayProgress,
+            encounteredCharacters: newEncountered,
+          },
+        });
+      }
+    });
+
+    const newActiveEvents = state.railwayProgress.activeEvents.filter(e => e.eventId !== eventId);
+    const newEventHistory = [...state.railwayProgress.eventHistory, {
+      eventId,
+      timestamp: Date.now(),
+      outcome,
+    }];
+
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        activeEvents: newActiveEvents,
+        eventHistory: newEventHistory,
+      },
+      currentRailwayEvent: null,
+    });
+  },
+
+  closeRailwayEvent: () => set({ currentRailwayEvent: null }),
+
+  addRailwayExperience: (amount) => {
+    const state = get();
+    const newExp = state.railwayExperience + amount;
+    let newLevel = state.railwayLevel;
+    const expNeeded = newLevel * 500;
+    
+    if (newExp >= expNeeded && newLevel < 10) {
+      newLevel = newLevel + 1;
+      set({
+        railwayLevel: newLevel,
+        railwayExperience: newExp - expNeeded,
+        railwayProgress: {
+          ...state.railwayProgress,
+          level: newLevel,
+          experience: newExp - expNeeded,
+          magicCrystals: state.railwayProgress.magicCrystals + newLevel * 50,
+        },
+      });
+    } else {
+      set({
+        railwayExperience: newExp,
+        railwayProgress: {
+          ...state.railwayProgress,
+          experience: newExp,
+        },
+      });
+    }
+  },
+
+  levelUpRailway: () => {
+    const state = get();
+    const newLevel = Math.min(10, state.railwayLevel + 1);
+    set({
+      railwayLevel: newLevel,
+      railwayProgress: {
+        ...state.railwayProgress,
+        level: newLevel,
+      },
+    });
+  },
+
+  addResource: (type, amount) => {
+    const state = get();
+    const newResources = { ...state.railwayProgress.resources };
+    newResources[type] = (newResources[type] || 0) + amount;
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        resources: newResources,
+      },
+    });
+  },
+
+  removeResource: (type, amount) => {
+    const state = get();
+    const current = state.railwayProgress.resources[type] || 0;
+    if (current < amount) return false;
+    const newResources = { ...state.railwayProgress.resources };
+    newResources[type] = current - amount;
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        resources: newResources,
+      },
+    });
+    return true;
+  },
+
+  getBuiltStations: () => {
+    const state = get();
+    return getBuiltStations(state.railwayProgress.builtStations);
+  },
+
+  getBuiltRoutes: () => {
+    const state = get();
+    return getBuiltRoutes(state.railwayProgress.builtRoutes);
+  },
+
+  getAvailableRoutesForStation: (stationId) => {
+    const state = get();
+    return state.railwayRoutes.filter(r => 
+      (r.startStationId === stationId || r.endStationId === stationId) &&
+      (state.railwayProgress.builtRoutes.has(r.id) || r.built)
+    );
+  },
+
+  getAvailableEvents: (routeId, weather, timeOfDay) => {
+    const state = get();
+    const route = getRouteById(routeId);
+    if (!route) return [];
+
+    const startStation = getStationById(route.startStationId);
+    const endStation = getStationById(route.endStationId);
+
+    return state.railwayEvents.filter(event => {
+      if (event.routeIds && !event.routeIds.includes(routeId)) return false;
+      if (event.stationIds) {
+        const hasStart = event.stationIds.includes(route.startStationId);
+        const hasEnd = event.stationIds.includes(route.endStationId);
+        if (!hasStart && !hasEnd) return false;
+      }
+      if (event.region && event.region !== '全部') {
+        const regionsMatch = startStation?.region === event.region || endStation?.region === event.region;
+        if (!regionsMatch) return false;
+      }
+      if (event.triggerCondition) {
+        if (event.triggerCondition.includes('天气') && !event.triggerCondition.includes(weather)) return false;
+        if (event.triggerCondition.includes('夜晚') && timeOfDay !== 'night') return false;
+        if (event.triggerCondition.includes('白天') && timeOfDay !== 'day') return false;
+      }
+      const now = Date.now();
+      if (event.lastTriggered && now - event.lastTriggered < event.cooldown * 1000) return false;
+      
+      return true;
+    });
+  },
+
+  setAutoAdvanceTrains: (enabled) => set({ autoAdvanceTrains: enabled }),
+
+  updateTrainPosition: (trainId, progress) => {
+    const state = get();
+    const updatedTrains = state.railwayProgress.trains.map(t => {
+      if (t.id === trainId && t.status === '行驶中') {
+        return t;
+      }
+      return t;
+    });
+    if (progress >= 1) {
+      state.completeTrainJourney(trainId);
+    }
+  },
+
+  repairTrain: (trainId) => {
+    const state = get();
+    const updatedTrains = state.railwayProgress.trains.map(t => {
+      if (t.id === trainId && t.status === '维修中') {
+        return { ...t, status: '停靠' as const };
+      }
+      return t;
+    });
+    set({
+      railwayProgress: {
+        ...state.railwayProgress,
+        trains: updatedTrains,
+      },
+    });
+  },
+
+  addTransportLog: (log) => {
+    const state = get();
+    const newLog: TransportLog = {
+      ...log,
+      id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    };
+    set({
+      transportLogs: [newLog, ...state.transportLogs].slice(0, 50),
+    });
+  },
+
+  getTotalTransportedPassengers: () => {
+    return get().railwayProgress.totalPassengersTransported;
+  },
+
+  getTotalTransportedResources: () => {
+    return get().railwayProgress.totalResourcesTransported;
+  },
+
+  getRailwayLevel: () => {
+    return get().railwayLevel;
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),

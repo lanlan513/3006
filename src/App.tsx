@@ -15,6 +15,7 @@ import CosmicEvents from '@/pages/CosmicEvents';
 import DreamWorld from '@/pages/DreamWorld';
 import HistoryArchive from '@/pages/HistoryArchive';
 import LanguageDecipher from '@/pages/LanguageDecipher';
+import MagicRailway from '@/pages/MagicRailway';
 import { useStoryStore } from '@/store/storyStore';
 
 const DAY_NIGHT_INTERVAL_MS = 60000;
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/dream-world" element={<DreamWorld />} />
         <Route path="/history-archive" element={<HistoryArchive />} />
         <Route path="/language-decipher" element={<LanguageDecipher />} />
+        <Route path="/magic-railway" element={<MagicRailway />} />
       </Routes>
     </Router>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe } from 'lucide-react';
+import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe, Wand2 } from 'lucide-react';
 import { useStoryStore } from '@/store/storyStore';
 
 export default function Navbar() {
@@ -62,6 +62,17 @@ export default function Navbar() {
               童话地图
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
             </Link>
+            <Link
+              to="/magic-workshop"
+              className="font-body text-gray-700 hover:text-fairy-purple transition-colors duration-300 relative group"
+            >
+              <span className="inline-flex items-center gap-1">
+                <Wand2 className="w-4 h-4 inline-block" />
+                道具工坊
+              </span>
+              <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-fairy-gold animate-twinkle" />
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
+            </Link>
 
             <form onSubmit={handleSearch} className="relative">
               <input
@@ -121,6 +132,17 @@ export default function Navbar() {
               <span className="inline-flex items-center gap-2">
                 <Globe className="w-4 h-4" />
                 童话地图
+              </span>
+            </Link>
+            <Link
+              to="/magic-workshop"
+              className="block font-body text-gray-700 hover:text-fairy-purple transition-colors py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Wand2 className="w-4 h-4" />
+                道具工坊
+                <span className="w-2 h-2 rounded-full bg-fairy-gold animate-twinkle" />
               </span>
             </Link>
             <form onSubmit={handleSearch} className="relative">

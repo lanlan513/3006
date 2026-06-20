@@ -9,23 +9,38 @@ import type {
   UserChoiceRecord,
   EndingRoute,
   EndingPathStep,
+  MagicItem,
+  MagicItemCategory,
+  MagicItemRarity,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
 import { interactiveStories } from '@/data/interactiveStories';
+import { magicItems } from '@/data/magicItems';
 
 interface StoryState {
   stories: Story[];
   characters: StoryCharacter[];
   interactiveStories: InteractiveStory[];
+  magicItems: MagicItem[];
+  customMagicItems: MagicItem[];
   searchQuery: string;
   selectedRegion: Region;
   selectedCharacterType: CharacterType;
+  selectedMagicItemCategory: MagicItemCategory;
+  selectedMagicItemRarity: MagicItemRarity | '全部';
+  combineSlots: (MagicItem | null)[];
   likedStories: Set<string>;
   storyProgress: Record<string, StoryProgress>;
   setSearchQuery: (query: string) => void;
   setSelectedRegion: (region: Region) => void;
   setSelectedCharacterType: (type: CharacterType) => void;
+  setSelectedMagicItemCategory: (category: MagicItemCategory) => void;
+  setSelectedMagicItemRarity: (rarity: MagicItemRarity | '全部') => void;
+  setCombineSlot: (index: number, item: MagicItem | null) => void;
+  clearCombineSlots: () => void;
+  addCustomMagicItem: (item: MagicItem) => void;
+  removeCustomMagicItem: (id: string) => void;
   toggleLike: (storyId: string) => void;
   isLiked: (storyId: string) => boolean;
   initStoryProgress: (interactiveStoryId: string, startNodeId: string) => void;
@@ -44,15 +59,45 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   stories,
   characters,
   interactiveStories,
+  magicItems,
+  customMagicItems: [],
   searchQuery: '',
   selectedRegion: '全部',
   selectedCharacterType: '全部',
+  selectedMagicItemCategory: '全部',
+  selectedMagicItemRarity: '全部',
+  combineSlots: [null, null, null, null, null],
   likedStories: new Set(),
   storyProgress: {},
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedRegion: (region) => set({ selectedRegion: region }),
   setSelectedCharacterType: (type) => set({ selectedCharacterType: type }),
+  setSelectedMagicItemCategory: (category) => set({ selectedMagicItemCategory: category }),
+  setSelectedMagicItemRarity: (rarity) => set({ selectedMagicItemRarity: rarity }),
+  setCombineSlot: (index, item) => {
+    const current = get().combineSlots;
+    const next = [...current];
+    if (item === null) {
+      next[index] = null;
+    } else {
+      const existingIndex = next.findIndex((s) => s?.id === item.id);
+      if (existingIndex !== -1 && existingIndex !== index) {
+        next[existingIndex] = null;
+      }
+      next[index] = item;
+    }
+    set({ combineSlots: next });
+  },
+  clearCombineSlots: () => set({ combineSlots: [null, null, null, null, null] }),
+  addCustomMagicItem: (item) => {
+    const current = get().customMagicItems;
+    set({ customMagicItems: [item, ...current] });
+  },
+  removeCustomMagicItem: (id) => {
+    const current = get().customMagicItems;
+    set({ customMagicItems: current.filter((i) => i.id !== id) });
+  },
   toggleLike: (storyId) => {
     const current = get().likedStories;
     const next = new Set(current);
@@ -319,4 +364,49 @@ export const buildStoryTree = (
     visitedSet: new Set(visitedNodes),
     nodes,
   };
+};
+
+export const getAllMagicItems = (
+  magicItems: MagicItem[], customMagicItems: MagicItem[]): MagicItem[] => {
+  return [...magicItems, ...customMagicItems];
+};
+
+export const getFilteredMagicItems = (
+  items: MagicItem[],
+  category: MagicItemCategory,
+  rarity: MagicItemRarity | '全部',
+  searchQuery: string
+): MagicItem[] => {
+  return items.filter((item) => {
+    const matchesCategory = category === '全部' || item.category === category;
+    const matchesRarity = rarity === '全部' || item.rarity === rarity;
+    const matchesSearch =
+      searchQuery === '' ||
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      item.abilities.some((a) => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesCategory && matchesRarity && matchesSearch;
+  });
+};
+
+export const getMagicItemById = (
+  items: MagicItem[],
+  id: string
+): MagicItem | undefined => {
+  return items.find((i) => i.id === id);
+};
+
+export const getMagicItemsByStory = (
+  items: MagicItem[],
+  storyTitle: string
+): MagicItem[] => {
+  return items.filter((i) => i.storyTitle === storyTitle);
+};
+
+export const getMagicItemsByRarity = (
+  items: MagicItem[],
+  rarity: MagicItemRarity
+): MagicItem[] => {
+  return items.filter((i) => i.rarity === rarity);
 };

@@ -5,6 +5,7 @@ import StoryDetail from '@/pages/StoryDetail';
 import CharacterHall from '@/pages/CharacterHall';
 import CharacterDetail from '@/pages/CharacterDetail';
 import FairyMap from '@/pages/FairyMap';
+import MagicWorkshop from '@/pages/MagicWorkshop';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/characters" element={<CharacterHall />} />
         <Route path="/characters/:id" element={<CharacterDetail />} />
         <Route path="/fairy-map" element={<FairyMap />} />
+        <Route path="/magic-workshop" element={<MagicWorkshop />} />
       </Routes>
     </Router>
   );

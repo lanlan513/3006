@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SearchBar from '@/components/SearchBar';
 import StoryCard from '@/components/StoryCard';
@@ -73,6 +73,13 @@ export default function Home() {
                 NEW
               </span>
             </a>
+            <Link to="/magic-workshop" className="fairy-button-outline inline-flex items-center gap-2 relative overflow-hidden">
+              <Gift className="w-5 h-5" />
+              道具工坊
+              <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-purple to-pink-400 text-white text-[10px] rounded-full font-body font-bold shadow-md animate-twinkle">
+                NEW
+              </span>
+            </Link>
             <Link to="/fairy-map" className="fairy-button-outline inline-flex items-center gap-2">
               <Globe className="w-5 h-5" />
               童话地图
@@ -255,6 +262,69 @@ export default function Home() {
           >
             查看全部 <ArrowRight className="w-4 h-4" />
           </Link>
+        </section>
+
+        <section className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fairy-gold via-pink-400 to-fairy-purple flex items-center justify-center relative">
+                <Gift className="w-6 h-6 text-white" />
+                <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-gold to-orange-400 text-white text-[10px] rounded-full font-body font-bold shadow-md">
+                  NEW
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-fairy text-gray-800">魔法道具工坊</h2>
+                <p className="text-sm text-gray-500 font-body">收集神奇宝物，创造全新幻想</p>
+              </div>
+            </div>
+            <Link
+              to="/magic-workshop"
+              className="hidden md:inline-flex items-center gap-1 text-fairy-purple font-body hover:gap-2 transition-all"
+            >
+              进入工坊 <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="bg-gradient-to-br from-fairy-purple/15 via-fairy-pink/10 to-fairy-gold/15 rounded-3xl p-6 md:p-8 border border-fairy-purple/20">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="flex gap-3">
+                {['🪞', '🫘', '👠', '🧞', '💍'].map((emoji, i) => (
+                  <div
+                    key={i}
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center bg-white/80 shadow-md animate-float"
+                    style={{ animationDelay: `${i * 0.3}s` }}
+                  >
+                    <span className="text-3xl md:text-4xl">{emoji}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="font-fairy text-xl md:text-2xl text-gray-800 mb-2">
+                  探索童话世界的神奇宝物
+                </h3>
+                <p className="text-gray-600 font-body leading-relaxed mb-4">
+                  魔镜、魔豆、水晶鞋、飞毯、魔法戒指……收集所有童话中的经典魔法道具，
+                  了解它们的出处故事和神奇能力。更可以拖拽组合多件道具，
+                  创造属于你自己的全新幻想物品，生成专属的道具卡片和背景故事！
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  {['20+ 经典道具', '拖拽组合创造', '背景故事生成', '稀有度系统'].map((tag) => (
+                    <span key={tag} className="fairy-tag text-xs bg-white/50 text-gray-700">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <Link
+                to="/magic-workshop"
+                className="fairy-button inline-flex items-center gap-2 whitespace-nowrap"
+              >
+                <Wand2 className="w-5 h-5" />
+                立即体验
+              </Link>
+            </div>
+          </div>
         </section>
 
         <section id="bookshelf" className="container mx-auto px-4 py-12">

@@ -226,3 +226,117 @@ export interface MagicItem {
   createdAt?: number;
   isSpecialRecipe?: boolean;
 }
+
+export type CreatureHabitat =
+  | '全部'
+  | '天空'
+  | '海洋'
+  | '森林'
+  | '山脉'
+  | '地底'
+  | '沼泽'
+  | '极地'
+  | '沙漠'
+  | '仙境';
+
+export const CREATURE_HABITATS: CreatureHabitat[] = [
+  '全部',
+  '天空',
+  '海洋',
+  '森林',
+  '山脉',
+  '地底',
+  '沼泽',
+  '极地',
+  '沙漠',
+  '仙境',
+];
+
+export type CreatureAbilityType =
+  | '全部'
+  | '飞行'
+  | '魔法'
+  | '变形'
+  | '治愈'
+  | '预知'
+  | '力量'
+  | '速度'
+  | '幻术'
+  | '永生';
+
+export const CREATURE_ABILITIES: CreatureAbilityType[] = [
+  '全部',
+  '飞行',
+  '魔法',
+  '变形',
+  '治愈',
+  '预知',
+  '力量',
+  '速度',
+  '幻术',
+  '永生',
+];
+
+export type DangerLevel = '全部' | '温和' | '中立' | '危险' | '极度危险';
+
+export const DANGER_LEVELS: DangerLevel[] = ['全部', '温和', '中立', '危险', '极度危险'];
+
+export const DANGER_COLORS: Record<DangerLevel, { bg: string; border: string; text: string; glow: string }> = {
+  '全部': {
+    bg: 'from-gray-400 to-gray-500',
+    border: 'border-gray-400/50',
+    text: 'text-gray-600',
+    glow: 'shadow-gray-300/50',
+  },
+  '温和': {
+    bg: 'from-green-400 to-emerald-500',
+    border: 'border-green-400/50',
+    text: 'text-green-600',
+    glow: 'shadow-green-300/50',
+  },
+  '中立': {
+    bg: 'from-blue-400 to-cyan-500',
+    border: 'border-blue-400/50',
+    text: 'text-blue-600',
+    glow: 'shadow-blue-300/50',
+  },
+  '危险': {
+    bg: 'from-orange-400 to-red-500',
+    border: 'border-orange-400/50',
+    text: 'text-orange-600',
+    glow: 'shadow-orange-300/50',
+  },
+  '极度危险': {
+    bg: 'from-red-500 via-pink-500 to-purple-600',
+    border: 'border-red-500/50',
+    text: 'text-red-600',
+    glow: 'shadow-red-300/50',
+  },
+};
+
+export interface CreatureAbility {
+  name: string;
+  description: string;
+}
+
+export interface Creature {
+  id: string;
+  name: string;
+  latinName: string;
+  emoji: string;
+  coverColor: string;
+  habitat: Exclude<CreatureHabitat, '全部'>;
+  abilities: CreatureAbility[];
+  abilityTypes: Exclude<CreatureAbilityType, '全部'>[];
+  dangerLevel: Exclude<DangerLevel, '全部'>;
+  description: string;
+  appearance: string;
+  behavior: string;
+  originStory: string;
+  storyTitle: string;
+  storyRegion: string;
+  traits: string[];
+  lifespan: string;
+  size: string;
+  rarity: '普通' | '稀有' | '史诗' | '传说' | '神话';
+}

@@ -12,11 +12,16 @@ import type {
   MagicItem,
   MagicItemCategory,
   MagicItemRarity,
+  Creature,
+  CreatureHabitat,
+  CreatureAbilityType,
+  DangerLevel,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
 import { interactiveStories } from '@/data/interactiveStories';
 import { magicItems } from '@/data/magicItems';
+import { creatures } from '@/data/creatures';
 
 interface StoryState {
   stories: Story[];
@@ -24,11 +29,16 @@ interface StoryState {
   interactiveStories: InteractiveStory[];
   magicItems: MagicItem[];
   customMagicItems: MagicItem[];
+  creatures: Creature[];
+  unlockedCreatures: Set<string>;
   searchQuery: string;
   selectedRegion: Region;
   selectedCharacterType: CharacterType;
   selectedMagicItemCategory: MagicItemCategory;
   selectedMagicItemRarity: MagicItemRarity | '全部';
+  selectedCreatureHabitat: CreatureHabitat;
+  selectedCreatureAbility: CreatureAbilityType;
+  selectedCreatureDanger: DangerLevel;
   combineSlots: (MagicItem | null)[];
   likedStories: Set<string>;
   storyProgress: Record<string, StoryProgress>;
@@ -37,12 +47,17 @@ interface StoryState {
   setSelectedCharacterType: (type: CharacterType) => void;
   setSelectedMagicItemCategory: (category: MagicItemCategory) => void;
   setSelectedMagicItemRarity: (rarity: MagicItemRarity | '全部') => void;
+  setSelectedCreatureHabitat: (habitat: CreatureHabitat) => void;
+  setSelectedCreatureAbility: (ability: CreatureAbilityType) => void;
+  setSelectedCreatureDanger: (danger: DangerLevel) => void;
   setCombineSlot: (index: number, item: MagicItem | null) => void;
   clearCombineSlots: () => void;
   addCustomMagicItem: (item: MagicItem) => void;
   removeCustomMagicItem: (id: string) => void;
   toggleLike: (storyId: string) => void;
   isLiked: (storyId: string) => boolean;
+  unlockCreature: (creatureId: string) => void;
+  isCreatureUnlocked: (creatureId: string) => boolean;
   initStoryProgress: (interactiveStoryId: string, startNodeId: string) => void;
   setCurrentNode: (interactiveStoryId: string, nodeId: string) => void;
   recordChoice: (interactiveStoryId: string, nodeId: string, choiceId: string) => void;
@@ -61,11 +76,16 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   interactiveStories,
   magicItems,
   customMagicItems: [],
+  creatures,
+  unlockedCreatures: new Set(),
   searchQuery: '',
   selectedRegion: '全部',
   selectedCharacterType: '全部',
   selectedMagicItemCategory: '全部',
   selectedMagicItemRarity: '全部',
+  selectedCreatureHabitat: '全部',
+  selectedCreatureAbility: '全部',
+  selectedCreatureDanger: '全部',
   combineSlots: [null, null, null, null, null],
   likedStories: new Set(),
   storyProgress: {},
@@ -75,6 +95,28 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   setSelectedCharacterType: (type) => set({ selectedCharacterType: type }),
   setSelectedMagicItemCategory: (category) => set({ selectedMagicItemCategory: category }),
   setSelectedMagicItemRarity: (rarity) => set({ selectedMagicItemRarity: rarity }),
+  setSelectedCreatureHabitat: (habitat) => set({ selectedCreatureHabitat: habitat }),
+  setSelectedCreatureAbility: (ability) => set({ selectedCreatureAbility: ability }),
+  setSelectedCreatureDanger: (danger) => set({ selectedCreatureDanger: danger }),
+  toggleLike: (storyId) => {
+    const current = get().likedStories;
+    const next = new Set(current);
+    if (next.has(storyId)) {
+      next.delete(storyId);
+    } else {
+      next.add(storyId);
+    }
+    set({ likedStories: next });
+  },
+  isLiked: (storyId) => get().likedStories.has(storyId),
+  unlockCreature: (creatureId) => {
+    const current = get().unlockedCreatures;
+    if (current.has(creatureId)) return;
+    const next = new Set(current);
+    next.add(creatureId);
+    set({ unlockedCreatures: next });
+  },
+  isCreatureUnlocked: (creatureId) => get().unlockedCreatures.has(creatureId),
   setCombineSlot: (index, item) => {
     const current = get().combineSlots;
     const next = [...current];
@@ -98,17 +140,6 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const current = get().customMagicItems;
     set({ customMagicItems: current.filter((i) => i.id !== id) });
   },
-  toggleLike: (storyId) => {
-    const current = get().likedStories;
-    const next = new Set(current);
-    if (next.has(storyId)) {
-      next.delete(storyId);
-    } else {
-      next.add(storyId);
-    }
-    set({ likedStories: next });
-  },
-  isLiked: (storyId) => get().likedStories.has(storyId),
 
   initStoryProgress: (interactiveStoryId, startNodeId) => {
     const current = get().storyProgress;
@@ -409,4 +440,40 @@ export const getMagicItemsByRarity = (
   rarity: MagicItemRarity
 ): MagicItem[] => {
   return items.filter((i) => i.rarity === rarity);
+};
+
+export const getFilteredCreatures = (
+  creatures: Creature[],
+  habitat: CreatureHabitat,
+  ability: CreatureAbilityType,
+  danger: DangerLevel,
+  searchQuery: string
+): Creature[] => {
+  return creatures.filter((creature) => {
+    const matchesHabitat = habitat === '全部' || creature.habitat === habitat;
+    const matchesAbility = ability === '全部' || creature.abilityTypes.includes(ability as Exclude<CreatureAbilityType, '全部'>);
+    const matchesDanger = danger === '全部' || creature.dangerLevel === danger;
+    const matchesSearch =
+      searchQuery === '' ||
+      creature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      creature.latinName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      creature.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      creature.traits.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      creature.abilities.some((a) => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesHabitat && matchesAbility && matchesDanger && matchesSearch;
+  });
+};
+
+export const getCreatureById = (
+  creatures: Creature[],
+  id: string
+): Creature | undefined => {
+  return creatures.find((c) => c.id === id);
+};
+
+export const getCreaturesByHabitat = (
+  creatures: Creature[],
+  habitat: Exclude<CreatureHabitat, '全部'>
+): Creature[] => {
+  return creatures.filter((c) => c.habitat === habitat);
 };

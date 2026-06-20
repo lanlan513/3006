@@ -1,22 +1,29 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift, ScrollText, Trophy } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SearchBar from '@/components/SearchBar';
 import StoryCard from '@/components/StoryCard';
 import CharacterCard from '@/components/CharacterCard';
+import CreatureCard from '@/components/CreatureCard';
 import FloatingDecorations from '@/components/FloatingDecorations';
 import { useStoryStore, getHotStories, getInteractiveStoryByStoryId } from '@/store/storyStore';
 
 export default function Home() {
   const allStories = useStoryStore((state) => state.stories);
   const allCharacters = useStoryStore((state) => state.characters);
+  const allCreatures = useStoryStore((state) => state.creatures);
+  const unlockedCreatures = useStoryStore((state) => state.unlockedCreatures);
   const interactiveStories = useStoryStore((state) => state.interactiveStories);
   const storyProgress = useStoryStore((state) => state.storyProgress);
   const hotStories = useMemo(() => getHotStories(allStories), [allStories]);
   const featuredCharacters = useMemo(
     () => allCharacters.filter((c) => c.isProtagonist).slice(0, 4),
     [allCharacters]
+  );
+  const featuredCreatures = useMemo(
+    () => allCreatures.slice(0, 4),
+    [allCreatures]
   );
 
   const interactiveStoriesWithData = useMemo(() => {
@@ -73,6 +80,13 @@ export default function Home() {
                 NEW
               </span>
             </a>
+            <Link to="/creature-pedia" className="fairy-button inline-flex items-center gap-2 relative overflow-hidden">
+              <ScrollText className="w-5 h-5" />
+              生物图鉴
+              <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-purple to-pink-500 text-white text-[10px] rounded-full font-body font-bold shadow-md animate-twinkle">
+                NEW
+              </span>
+            </Link>
             <Link to="/magic-workshop" className="fairy-button-outline inline-flex items-center gap-2 relative overflow-hidden">
               <Gift className="w-5 h-5" />
               道具工坊
@@ -325,6 +339,103 @@ export default function Home() {
               </Link>
             </div>
           </div>
+        </section>
+
+        <section className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fairy-purple via-pink-400 to-fairy-gold flex items-center justify-center relative">
+                <ScrollText className="w-6 h-6 text-white" />
+                <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-purple to-pink-500 text-white text-[10px] rounded-full font-body font-bold shadow-md">
+                  NEW
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-fairy text-gray-800">童话生物图鉴</h2>
+                <p className="text-sm text-gray-500 font-body">探索神秘生物，解锁冒险者手册</p>
+              </div>
+            </div>
+            <Link
+              to="/creature-pedia"
+              className="hidden md:inline-flex items-center gap-1 text-fairy-purple font-body hover:gap-2 transition-all"
+            >
+              进入图鉴 <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="bg-gradient-to-br from-fairy-purple/15 via-fairy-pink/10 to-fairy-gold/15 rounded-3xl p-6 md:p-8 border border-fairy-purple/20 mb-8">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="flex gap-3">
+                {featuredCreatures.slice(0, 5).map((creature, i) => (
+                  <div
+                    key={creature.id}
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center bg-white/80 shadow-md animate-float"
+                    style={{
+                      backgroundColor: creature.coverColor + '30',
+                      animationDelay: `${i * 0.3}s`,
+                    }}
+                  >
+                    <span className="text-3xl md:text-4xl">{creature.emoji}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="font-fairy text-xl md:text-2xl text-gray-800 mb-2">
+                  探索童话世界的神秘生灵
+                </h3>
+                <p className="text-gray-600 font-body leading-relaxed mb-4">
+                  从翱翔天际的巨龙到深海沉睡的海妖，从森林深处的精灵到沙漠中重生的凤凰。
+                  点击解锁这些神秘生物，记录它们的外貌、习性与传说。
+                  查看图鉴完成度，成为真正的童话冒险者！
+                </p>
+                <div className="flex items-center gap-4 mb-4 justify-center md:justify-start">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-fairy-gold" />
+                    <span className="font-body text-gray-700">
+                      图鉴完成度：<span className="font-bold text-fairy-purple">{unlockedCreatures.size}/{allCreatures.length}</span>
+                    </span>
+                  </div>
+                  <div className="w-32 h-2 bg-white/70 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-fairy transition-all duration-500 rounded-full"
+                      style={{ width: allCreatures.length > 0 ? (unlockedCreatures.size / allCreatures.length) * 100 : 0 }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  {['12+ 幻想生物', '栖息地分类', '危险等级系统', '解锁收集玩法'].map((tag) => (
+                    <span key={tag} className="fairy-tag text-xs bg-white/50 text-gray-700">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <Link
+                to="/creature-pedia"
+                className="fairy-button inline-flex items-center gap-2 whitespace-nowrap"
+              >
+                <ScrollText className="w-5 h-5" />
+                立即探索
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredCreatures.map((creature) => (
+              <CreatureCard
+                key={creature.id}
+                creature={creature}
+                variant={unlockedCreatures.has(creature.id) ? 'default' : 'locked'}
+              />
+            ))}
+          </div>
+
+          <Link
+            to="/creature-pedia"
+            className="md:hidden mt-6 flex items-center justify-center gap-1 text-fairy-purple font-body"
+          >
+            查看全部 <ArrowRight className="w-4 h-4" />
+          </Link>
         </section>
 
         <section id="bookshelf" className="container mx-auto px-4 py-12">

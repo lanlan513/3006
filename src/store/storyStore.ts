@@ -1239,44 +1239,63 @@ export const useStoryStore = create<StoryState>((set, get) => ({
       }
     }
 
+    let currentState = get();
+    let newResources = { ...currentState.railwayProgress.resources };
+    let newMagicCrystals = currentState.railwayProgress.magicCrystals;
+    let totalExpToAdd = 0;
+    const newCompletedSideStories = new Set(currentState.railwayProgress.completedSideStories);
+    const newEncounteredCharacters = new Set(currentState.railwayProgress.encounteredCharacters);
+    const newDiscoveredSecrets = new Set(currentState.railwayProgress.discoveredSecrets);
+
     event.rewards.forEach(reward => {
       if (reward.type === '资源' && reward.item && reward.amount) {
-        state.addResource(reward.item as ResourceType, reward.amount);
+        newResources[reward.item as ResourceType] = (newResources[reward.item as ResourceType] || 0) + reward.amount;
+        if (reward.item === '魔法晶石') {
+          newMagicCrystals += reward.amount;
+        }
       } else if (reward.type === '经验' && reward.amount) {
-        state.addRailwayExperience(reward.amount);
+        totalExpToAdd += reward.amount;
       } else if (reward.type === '故事' && reward.storyId) {
-        const newCompleted = new Set(state.railwayProgress.completedSideStories);
-        newCompleted.add(reward.storyId);
-        set({
-          railwayProgress: {
-            ...state.railwayProgress,
-            completedSideStories: newCompleted,
-          },
-        });
+        newCompletedSideStories.add(reward.storyId);
       } else if (reward.type === '角色' && reward.characterId) {
-        const newEncountered = new Set(state.railwayProgress.encounteredCharacters);
-        newEncountered.add(reward.characterId);
-        set({
-          railwayProgress: {
-            ...state.railwayProgress,
-            encounteredCharacters: newEncountered,
-          },
-        });
+        newEncounteredCharacters.add(reward.characterId);
+      } else if (reward.type === '秘密' && reward.secretId) {
+        newDiscoveredSecrets.add(reward.secretId);
       }
     });
 
-    const newActiveEvents = state.railwayProgress.activeEvents.filter(e => e.eventId !== eventId);
-    const newEventHistory = [...state.railwayProgress.eventHistory, {
+    const newActiveEvents = currentState.railwayProgress.activeEvents.filter(e => e.eventId !== eventId);
+    const newEventHistory = [...currentState.railwayProgress.eventHistory, {
       eventId,
       timestamp: Date.now(),
       outcome,
     }];
 
+    const currentRailwayExp = currentState.railwayExperience + totalExpToAdd;
+    let finalLevel = currentState.railwayLevel;
+    let remainingExp = currentRailwayExp;
+    let finalMagicCrystals = newMagicCrystals;
+
+    while (remainingExp >= finalLevel * 500 && finalLevel < 10) {
+      remainingExp -= finalLevel * 500;
+      finalLevel += 1;
+      finalMagicCrystals += finalLevel * 50;
+    }
+
     set({
+      railwayExperience: remainingExp,
+      railwayLevel: finalLevel,
       railwayProgress: {
-        ...state.railwayProgress,
+        ...currentState.railwayProgress,
+        resources: newResources,
+        magicCrystals: finalMagicCrystals,
+        experience: remainingExp,
+        level: finalLevel,
         activeEvents: newActiveEvents,
         eventHistory: newEventHistory,
+        completedSideStories: newCompletedSideStories,
+        encounteredCharacters: newEncounteredCharacters,
+        discoveredSecrets: newDiscoveredSecrets,
       },
       currentRailwayEvent: null,
     });
@@ -1329,10 +1348,16 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const state = get();
     const newResources = { ...state.railwayProgress.resources };
     newResources[type] = (newResources[type] || 0) + amount;
+    const updates: Partial<typeof state.railwayProgress> = {
+      resources: newResources,
+    };
+    if (type === '魔法晶石') {
+      updates.magicCrystals = state.railwayProgress.magicCrystals + amount;
+    }
     set({
       railwayProgress: {
         ...state.railwayProgress,
-        resources: newResources,
+        ...updates,
       },
     });
   },

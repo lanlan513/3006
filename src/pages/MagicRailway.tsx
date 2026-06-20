@@ -22,8 +22,11 @@ import {
   TrendingUp,
   Calendar,
   MapPin,
+  Home,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useStoryStore } from '@/store/storyStore';
+import Navbar from '@/components/Navbar';
 import {
   getStationById,
   getRouteById,
@@ -1184,9 +1187,19 @@ const MagicRailway: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950 pt-20 pb-8 px-4 md:px-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950">
+      <Navbar />
+      <div className="max-w-7xl mx-auto pt-6 pb-8 px-4 md:px-6">
         <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-slate-700 hover:border-purple-500/30 transition-all"
+            >
+              <Home className="w-4 h-4" />
+              返回首页
+            </Link>
+          </div>
           <div className="flex items-center gap-3 mb-2">
             <span className="text-4xl">🚂</span>
             <div>

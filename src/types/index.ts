@@ -1334,12 +1334,13 @@ export interface RailwayEvent {
   region?: Region | '全部';
   triggerCondition?: string;
   rewards: {
-    type: '资源' | '故事' | '经验' | '道具' | '角色';
+    type: '资源' | '故事' | '经验' | '道具' | '角色' | '秘密';
     item?: string;
     amount?: number;
     storyId?: string;
     characterId?: string;
     itemId?: string;
+    secretId?: string;
   }[];
   choices?: {
     id: string;

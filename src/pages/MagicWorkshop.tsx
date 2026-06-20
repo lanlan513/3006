@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Home,
@@ -64,6 +64,9 @@ export default function MagicWorkshop() {
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [showCustomOnly, setShowCustomOnly] = useState(false);
   const [isDraggingFromList, setIsDraggingFromList] = useState(false);
+  const [highlightSlotIndex, setHighlightSlotIndex] = useState<number | null>(null);
+
+  const workshopRef = useRef<HTMLDivElement>(null);
 
   const allItems = useMemo(() => getAllMagicItems(baseItems, customItems), [baseItems, customItems]);
 
@@ -148,10 +151,18 @@ export default function MagicWorkshop() {
       setCombineSlot(alreadyInSlot, null);
     } else if (emptySlotIndex !== -1) {
       setCombineSlot(emptySlotIndex, item);
+      setHighlightSlotIndex(emptySlotIndex);
+      setTimeout(() => setHighlightSlotIndex(null), 1500);
+
+      workshopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
       setCombineError('组合槽已满！请先移除一个道具');
       setTimeout(() => setCombineError(null), 3000);
     }
+  };
+
+  const handleViewDetail = (item: MagicItem) => {
+    setSelectedItem(item);
   };
 
   const handleCombine = async () => {
@@ -238,7 +249,7 @@ export default function MagicWorkshop() {
           </div>
         </section>
 
-        <section className="container mx-auto px-4 py-8 mb-8">
+        <section className="container mx-auto px-4 py-8 mb-8" ref={workshopRef}>
           <div className={cn(
             'rounded-3xl p-6 md:p-10 border relative overflow-hidden transition-all duration-500',
             isSpecialRecipe
@@ -289,9 +300,11 @@ export default function MagicWorkshop() {
                         'w-28 h-32 md:w-32 md:h-36 rounded-2xl border-2 border-dashed transition-all duration-300 relative',
                         dragOverSlot === index
                           ? 'border-fairy-purple bg-fairy-purple/20 scale-110'
-                          : slot
-                            ? 'border-transparent'
-                            : 'border-fairy-purple/40 bg-white/50 hover:bg-white/70 hover:border-fairy-purple'
+                          : highlightSlotIndex === index
+                            ? 'border-fairy-gold bg-fairy-gold/20 scale-110 animate-pulse'
+                            : slot
+                              ? 'border-transparent'
+                              : 'border-fairy-purple/40 bg-white/50 hover:bg-white/70 hover:border-fairy-purple'
                       )}
                       onDragOver={(e) => handleSlotDragOver(e, index)}
                       onDragLeave={handleSlotDragLeave}
@@ -402,7 +415,10 @@ export default function MagicWorkshop() {
                 <MagicItemCard
                   key={item.id}
                   item={item}
+                  selected={combineSlots.some((s) => s?.id === item.id)}
                   onClick={() => handleCardClick(item)}
+                  onViewDetail={() => handleViewDetail(item)}
+                  showDetailButton
                   onDragStart={(e) => handleDragStart(e, item)}
                   onDragEnd={handleDragEnd}
                   draggable
@@ -530,7 +546,10 @@ export default function MagicWorkshop() {
                 <MagicItemCard
                   key={item.id}
                   item={item}
+                  selected={combineSlots.some((s) => s?.id === item.id)}
                   onClick={() => handleCardClick(item)}
+                  onViewDetail={() => handleViewDetail(item)}
+                  showDetailButton
                   onDragStart={(e) => handleDragStart(e, item)}
                   onDragEnd={handleDragEnd}
                   draggable

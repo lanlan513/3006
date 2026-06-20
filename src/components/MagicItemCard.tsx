@@ -1,4 +1,4 @@
-import { X, Zap, BookOpen, Sparkles, Star } from 'lucide-react';
+import { X, Zap, BookOpen, Sparkles, Star, Eye, Check, Plus } from 'lucide-react';
 import type { MagicItem } from '@/types';
 import { RARITY_COLORS } from '@/types';
 import { cn } from '@/lib/utils';
@@ -7,22 +7,26 @@ interface MagicItemCardProps {
   item: MagicItem;
   variant?: 'default' | 'compact' | 'slot';
   onClick?: () => void;
+  onViewDetail?: () => void;
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
   onRemove?: () => void;
   draggable?: boolean;
   selected?: boolean;
+  showDetailButton?: boolean;
 }
 
 export default function MagicItemCard({
   item,
   variant = 'default',
   onClick,
+  onViewDetail,
   onDragStart,
   onDragEnd,
   onRemove,
   draggable = false,
   selected = false,
+  showDetailButton = false,
 }: MagicItemCardProps) {
   const rarityColors = RARITY_COLORS[item.rarity];
 
@@ -129,18 +133,20 @@ export default function MagicItemCard({
   return (
     <div
       className={cn(
-        'fairy-card overflow-hidden group cursor-pointer',
+        'fairy-card overflow-hidden group transition-all duration-300',
         'border-2',
         rarityColors.border,
-        selected && 'ring-4 ring-fairy-purple/30 scale-105',
+        selected && 'ring-4 ring-fairy-purple/40 scale-[1.02]',
         draggable && 'cursor-grab active:cursor-grabbing'
       )}
-      onClick={onClick}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      <div className="relative h-44 overflow-hidden">
+      <div
+        className="relative h-44 overflow-hidden cursor-pointer"
+        onClick={onClick}
+      >
         <div
           className="absolute inset-0"
           style={{ backgroundColor: item.coverColor }}
@@ -166,6 +172,12 @@ export default function MagicItemCard({
             </span>
           )}
         </div>
+
+        {selected && (
+          <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg animate-bounce-soft">
+            <Check className="w-5 h-5" />
+          </div>
+        )}
 
         <div className="absolute bottom-3 left-3 right-3">
           <div className="flex items-center gap-2 mb-1">
@@ -200,9 +212,9 @@ export default function MagicItemCard({
           </div>
         </div>
 
-        <p className="text-sm text-gray-600 font-body line-clamp-2 mb-3">{item.description}</p>
+        <p className="text-sm text-gray-600 font-body line-clamp-2 mb-4">{item.description}</p>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 mb-4">
           {item.tags.slice(0, 3).map((tag) => (
             <span key={tag} className="fairy-tag text-[10px] bg-fairy-purple/5 text-gray-600">
               {tag}
@@ -213,6 +225,45 @@ export default function MagicItemCard({
               +{item.tags.length - 3}
             </span>
           )}
+        </div>
+
+        <div className="flex gap-2">
+          {showDetailButton && onViewDetail && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetail();
+              }}
+              className="flex-1 px-3 py-2 rounded-xl font-body text-sm bg-fairy-purple/10 text-fairy-purple hover:bg-fairy-purple hover:text-white transition-all flex items-center justify-center gap-1.5"
+            >
+              <Eye className="w-4 h-4" />
+              查看详情
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+            className={cn(
+              'flex-1 px-3 py-2 rounded-xl font-body text-sm transition-all flex items-center justify-center gap-1.5',
+              selected
+                ? 'bg-red-100 text-red-500 hover:bg-red-500 hover:text-white'
+                : 'bg-gradient-fairy text-white hover:shadow-fairy-md hover:-translate-y-0.5'
+            )}
+          >
+            {selected ? (
+              <>
+                <X className="w-4 h-4" />
+                移出组合
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                加入组合
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

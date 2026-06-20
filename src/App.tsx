@@ -8,6 +8,8 @@ import FairyMap from '@/pages/FairyMap';
 import MagicWorkshop from '@/pages/MagicWorkshop';
 import CreaturePedia from '@/pages/CreaturePedia';
 import FairyTheater from '@/pages/FairyTheater';
+import FairyAcademy from '@/pages/FairyAcademy';
+import CourseDetail from '@/pages/CourseDetail';
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
         <Route path="/magic-workshop" element={<MagicWorkshop />} />
         <Route path="/creature-pedia" element={<CreaturePedia />} />
         <Route path="/fairy-theater" element={<FairyTheater />} />
+        <Route path="/academy" element={<FairyAcademy />} />
+        <Route path="/academy/:id" element={<CourseDetail />} />
       </Routes>
     </Router>
   );

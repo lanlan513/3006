@@ -532,3 +532,116 @@ export interface TheaterPerformance {
 
 export type TheaterEditorMode = 'edit' | 'play';
 export type TheaterPanelTab = 'characters' | 'scenes' | 'props' | 'storyboard' | 'dialogue';
+
+export type CourseCategory = '魔法' | '炼金术' | '骑士精神' | '龙语';
+
+export const COURSE_CATEGORIES: CourseCategory[] = ['魔法', '炼金术', '骑士精神', '龙语'];
+
+export type LessonType = 'lesson' | 'quiz' | 'game';
+
+export interface QuizOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+  explanation?: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: QuizOption[];
+  difficulty: '入门' | '初级' | '中级' | '高级';
+  hint?: string;
+}
+
+export interface GameChallenge {
+  id: string;
+  type: 'matching' | 'sequence' | 'spell' | 'potion';
+  title: string;
+  description: string;
+  instructions: string;
+  data: Record<string, unknown>;
+}
+
+export interface Lesson {
+  id: string;
+  courseId: string;
+  title: string;
+  type: LessonType;
+  order: number;
+  description: string;
+  content?: string[];
+  quizQuestions?: QuizQuestion[];
+  gameChallenge?: GameChallenge;
+  experienceReward: number;
+  badgeFragment?: string;
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  category: CourseCategory;
+  description: string;
+  emoji: string;
+  coverColor: string;
+  difficulty: '入门' | '初级' | '中级' | '高级';
+  duration: string;
+  lessons: Lesson[];
+  totalExperience: number;
+  completionBadge: SkillBadge;
+  completionTitle: Title;
+  prerequisites?: string[];
+}
+
+export interface SkillBadge {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  rarity: '普通' | '稀有' | '史诗' | '传说';
+  courseId: string;
+}
+
+export interface Title {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  rarity: '普通' | '稀有' | '史诗' | '传说';
+  requirement: string;
+}
+
+export interface AcademyProgress {
+  completedLessons: Set<string>;
+  completedCourses: Set<string>;
+  earnedBadges: Set<string>;
+  earnedTitles: Set<string>;
+  currentTitle: string | null;
+  totalExperience: number;
+  quizScores: Record<string, number>;
+  lessonStars: Record<string, number>;
+}
+
+export type MatchingGameItem = {
+  id: string;
+  left: string;
+  right: string;
+  leftEmoji?: string;
+  rightEmoji?: string;
+};
+
+export type SpellGameData = {
+  spellName: string;
+  spellEmoji: string;
+  incantation: string;
+  description: string;
+  instructions?: string;
+  sequence: string[];
+};
+
+export type PotionGameData = {
+  potionName: string;
+  potionEmoji: string;
+  description: string;
+  ingredients: { id: string; name: string; emoji: string; correctOrder: number }[];
+};

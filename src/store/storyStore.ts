@@ -20,12 +20,17 @@ import type {
   WeatherEffect,
   WeatherForecast,
   WEATHER_INFO,
+  Course,
+  SkillBadge,
+  Title,
+  CourseCategory,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
 import { interactiveStories } from '@/data/interactiveStories';
 import { magicItems } from '@/data/magicItems';
 import { creatures } from '@/data/creatures';
+import { courses, allBadges, allTitles, getCourseById } from '@/data/academy';
 
 interface StoryState {
   stories: Story[];
@@ -50,6 +55,18 @@ interface StoryState {
   currentGlobalWeather: WeatherType;
   weatherChangeTimer: number;
   unlockedWeatherStories: Set<string>;
+  academyCourses: Course[];
+  academyBadges: SkillBadge[];
+  academyTitles: Title[];
+  completedLessons: Set<string>;
+  completedCourses: Set<string>;
+  earnedBadges: Set<string>;
+  earnedTitles: Set<string>;
+  currentTitle: string | null;
+  totalAcademyExperience: number;
+  quizScores: Record<string, number>;
+  lessonStars: Record<string, number>;
+  selectedAcademyCategory: CourseCategory | '全部';
   setSearchQuery: (query: string) => void;
   setSelectedRegion: (region: Region) => void;
   setSelectedCharacterType: (type: CharacterType) => void;
@@ -86,6 +103,21 @@ interface StoryState {
   isStoryWeatherUnlocked: (storyId: string, storyRegion: Region, storyTags: string[]) => boolean;
   unlockWeatherStory: (storyId: string) => void;
   getCharacterWeatherBuff: (characterType: CharacterType, weather: WeatherType) => number;
+  setSelectedAcademyCategory: (category: CourseCategory | '全部') => void;
+  completeLesson: (lessonId: string, courseId: string, stars?: number) => void;
+  isLessonCompleted: (lessonId: string) => boolean;
+  isCourseCompleted: (courseId: string) => boolean;
+  getCourseProgress: (courseId: string) => number;
+  addAcademyExperience: (amount: number) => void;
+  earnBadge: (badgeId: string) => void;
+  hasBadge: (badgeId: string) => boolean;
+  earnTitle: (titleId: string) => void;
+  hasTitle: (titleId: string) => boolean;
+  setCurrentTitle: (titleId: string | null) => void;
+  setQuizScore: (quizId: string, score: number) => void;
+  getQuizScore: (quizId: string) => number;
+  completeCourse: (courseId: string) => void;
+  isLessonUnlocked: (lessonId: string, courseId: string) => boolean;
 }
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -123,6 +155,18 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   currentGlobalWeather: '晴朗',
   weatherChangeTimer: 300,
   unlockedWeatherStories: new Set(),
+  academyCourses: courses,
+  academyBadges: allBadges,
+  academyTitles: allTitles,
+  completedLessons: new Set(),
+  completedCourses: new Set(),
+  earnedBadges: new Set(),
+  earnedTitles: new Set(),
+  currentTitle: null,
+  totalAcademyExperience: 0,
+  quizScores: {},
+  lessonStars: {},
+  selectedAcademyCategory: '全部',
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedRegion: (region) => set({ selectedRegion: region }),
@@ -459,6 +503,136 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   getCharacterWeatherBuff: (characterType, weather): number => {
     const effect = get().getWeatherEffect(weather);
     return effect.characterBuff[characterType] || 0;
+  },
+
+  setSelectedAcademyCategory: (category) => set({ selectedAcademyCategory: category }),
+
+  completeLesson: (lessonId, courseId, stars = 3) => {
+    const state = get();
+    if (state.completedLessons.has(lessonId)) return;
+
+    const course = getCourseById(courseId);
+    const lesson = course?.lessons.find((l) => l.id === lessonId);
+    if (!lesson) return;
+
+    const newCompletedLessons = new Set(state.completedLessons);
+    newCompletedLessons.add(lessonId);
+
+    const newLessonStars = { ...state.lessonStars };
+    newLessonStars[lessonId] = Math.max(newLessonStars[lessonId] || 0, stars);
+
+    const newExp = state.totalAcademyExperience + lesson.experienceReward;
+
+    const allLessonsCompleted = course.lessons.every((l) =>
+      newCompletedLessons.has(l.id)
+    );
+
+    if (allLessonsCompleted && !state.completedCourses.has(courseId)) {
+      const newCompletedCourses = new Set(state.completedCourses);
+      newCompletedCourses.add(courseId);
+
+      const newEarnedBadges = new Set(state.earnedBadges);
+      newEarnedBadges.add(course.completionBadge.id);
+
+      const newEarnedTitles = new Set(state.earnedTitles);
+      newEarnedTitles.add(course.completionTitle.id);
+
+      set({
+        completedLessons: newCompletedLessons,
+        completedCourses: newCompletedCourses,
+        earnedBadges: newEarnedBadges,
+        earnedTitles: newEarnedTitles,
+        totalAcademyExperience: newExp + Math.floor(course.totalExperience * 0.2),
+        lessonStars: newLessonStars,
+      });
+    } else {
+      set({
+        completedLessons: newCompletedLessons,
+        totalAcademyExperience: newExp,
+        lessonStars: newLessonStars,
+      });
+    }
+  },
+
+  isLessonCompleted: (lessonId) => get().completedLessons.has(lessonId),
+
+  isCourseCompleted: (courseId) => get().completedCourses.has(courseId),
+
+  getCourseProgress: (courseId): number => {
+    const course = getCourseById(courseId);
+    if (!course) return 0;
+    const completed = course.lessons.filter((l) => get().completedLessons.has(l.id)).length;
+    return Math.round((completed / course.lessons.length) * 100);
+  },
+
+  addAcademyExperience: (amount) => {
+    set({ totalAcademyExperience: get().totalAcademyExperience + amount });
+  },
+
+  earnBadge: (badgeId) => {
+    const current = get().earnedBadges;
+    if (current.has(badgeId)) return;
+    const next = new Set(current);
+    next.add(badgeId);
+    set({ earnedBadges: next });
+  },
+
+  hasBadge: (badgeId) => get().earnedBadges.has(badgeId),
+
+  earnTitle: (titleId) => {
+    const current = get().earnedTitles;
+    if (current.has(titleId)) return;
+    const next = new Set(current);
+    next.add(titleId);
+    set({ earnedTitles: next });
+  },
+
+  hasTitle: (titleId) => get().earnedTitles.has(titleId),
+
+  setCurrentTitle: (titleId) => set({ currentTitle: titleId }),
+
+  setQuizScore: (quizId, score) => {
+    set({
+      quizScores: { ...get().quizScores, [quizId]: Math.max(get().quizScores[quizId] || 0, score) },
+    });
+  },
+
+  getQuizScore: (quizId) => get().quizScores[quizId] || 0,
+
+  completeCourse: (courseId) => {
+    const state = get();
+    if (state.completedCourses.has(courseId)) return;
+
+    const course = getCourseById(courseId);
+    if (!course) return;
+
+    const newCompletedCourses = new Set(state.completedCourses);
+    newCompletedCourses.add(courseId);
+
+    const newEarnedBadges = new Set(state.earnedBadges);
+    newEarnedBadges.add(course.completionBadge.id);
+
+    const newEarnedTitles = new Set(state.earnedTitles);
+    newEarnedTitles.add(course.completionTitle.id);
+
+    set({
+      completedCourses: newCompletedCourses,
+      earnedBadges: newEarnedBadges,
+      earnedTitles: newEarnedTitles,
+    });
+  },
+
+  isLessonUnlocked: (lessonId, courseId): boolean => {
+    const course = getCourseById(courseId);
+    if (!course) return false;
+
+    const sortedLessons = [...course.lessons].sort((a, b) => a.order - b.order);
+    const lessonIndex = sortedLessons.findIndex((l) => l.id === lessonId);
+
+    if (lessonIndex <= 0) return true;
+
+    const prevLesson = sortedLessons[lessonIndex - 1];
+    return get().completedLessons.has(prevLesson.id);
   },
 }));
 

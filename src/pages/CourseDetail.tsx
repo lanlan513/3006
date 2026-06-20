@@ -101,7 +101,6 @@ function QuizLesson({ lesson, onComplete }: {
     setSelectedOption(null);
     setShowResult(false);
     setCorrectCount(0);
-    setAnswered(new Set());
     setShowHint(false);
     setQuizCompleted(false);
   };

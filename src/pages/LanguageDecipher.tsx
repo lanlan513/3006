@@ -61,6 +61,13 @@ export default function LanguageDecipher() {
   const [puzzleSolved, setPuzzleSolved] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [answerChecked, setAnswerChecked] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
+  const [selectedRight, setSelectedRight] = useState<number | null>(null);
+  const [matchedPairs, setMatchedPairs] = useState<Set<number>>(new Set());
+  const [shuffledRights, setShuffledRights] = useState<{ left: string; right: string }[]>([]);
 
   const {
     languageWords,
@@ -118,6 +125,15 @@ export default function LanguageDecipher() {
     setPuzzleSolved(false);
     setShowHint(false);
     setHintIndex(0);
+    setUserAnswer('');
+    setAnswerChecked(false);
+    setIsCorrect(null);
+    setSelectedLeft(null);
+    setSelectedRight(null);
+    setMatchedPairs(new Set());
+    if (puzzle.type === 'matching' && puzzle.data.pairs) {
+      setShuffledRights([...puzzle.data.pairs].sort(() => Math.random() - 0.5));
+    }
   };
 
   const handleClosePuzzle = () => {
@@ -125,12 +141,82 @@ export default function LanguageDecipher() {
     setPuzzleSolved(false);
     setShowHint(false);
     setHintIndex(0);
+    setUserAnswer('');
+    setAnswerChecked(false);
+    setIsCorrect(null);
+    setSelectedLeft(null);
+    setSelectedRight(null);
+    setMatchedPairs(new Set());
   };
 
-  const handleSolvePuzzle = () => {
-    if (activePuzzle && !isPuzzleCompleted(activePuzzle.id)) {
-      completePuzzle(activePuzzle.id);
-      setPuzzleSolved(true);
+  const checkAnswer = () => {
+    if (!activePuzzle) return;
+
+    let correct = false;
+
+    if (activePuzzle.type === 'matching') {
+      correct = matchedPairs.size === activePuzzle.data.pairs.length;
+    } else {
+      const normalizedUserAnswer = userAnswer.trim().toLowerCase();
+      let correctAnswer = '';
+      if (activePuzzle.type === 'translate') {
+        correctAnswer = activePuzzle.data.answer.toLowerCase();
+      } else if (activePuzzle.type === 'fillBlank') {
+        correctAnswer = activePuzzle.data.answer.toLowerCase();
+      } else if (activePuzzle.type === 'anagram') {
+        correctAnswer = activePuzzle.data.answer.toLowerCase();
+      }
+      correct = normalizedUserAnswer === correctAnswer;
+    }
+
+    setIsCorrect(correct);
+    setAnswerChecked(true);
+
+    if (correct && !isPuzzleCompleted(activePuzzle.id)) {
+      setTimeout(() => {
+        completePuzzle(activePuzzle.id);
+        setPuzzleSolved(true);
+      }, 800);
+    }
+  };
+
+  const handleMatchingClick = (side: 'left' | 'right', index: number) => {
+    if (answerChecked || matchedPairs.has(index)) return;
+
+    if (side === 'left') {
+      setSelectedLeft(index);
+    } else {
+      setSelectedRight(index);
+    }
+
+    if (side === 'right' && selectedLeft !== null) {
+      const originalPair = activePuzzle?.type === 'matching' ? activePuzzle.data.pairs[selectedLeft] : null;
+      const clickedPair = shuffledRights[index];
+
+      if (originalPair && clickedPair && originalPair.left === clickedPair.left && originalPair.right === clickedPair.right) {
+        const newMatched = new Set(matchedPairs);
+        newMatched.add(selectedLeft);
+        setMatchedPairs(newMatched);
+      }
+
+      setTimeout(() => {
+        setSelectedLeft(null);
+        setSelectedRight(null);
+      }, 300);
+    } else if (side === 'left' && selectedRight !== null) {
+      const originalPair = activePuzzle?.type === 'matching' ? activePuzzle.data.pairs[index] : null;
+      const clickedPair = shuffledRights[selectedRight];
+
+      if (originalPair && clickedPair && originalPair.left === clickedPair.left && originalPair.right === clickedPair.right) {
+        const newMatched = new Set(matchedPairs);
+        newMatched.add(index);
+        setMatchedPairs(newMatched);
+      }
+
+      setTimeout(() => {
+        setSelectedLeft(null);
+        setSelectedRight(null);
+      }, 300);
     }
   };
 
@@ -232,7 +318,13 @@ export default function LanguageDecipher() {
               </div>
 
               <div className="mt-4 flex items-center justify-center">
-                <button className="fairy-button-outline text-sm py-2 px-4">
+                <button
+                  onClick={() => {
+                    setSelectedRace(race);
+                    setActiveTab('puzzles');
+                  }}
+                  className="fairy-button-outline text-sm py-2 px-4"
+                >
                   开始学习
                   <ChevronRight className="w-4 h-4 inline ml-1" />
                 </button>
@@ -718,46 +810,120 @@ export default function LanguageDecipher() {
               </div>
             ) : (
               <>
+                {answerChecked && isCorrect !== null && (
+                  <div className={`mb-4 p-3 rounded-xl text-center ${
+                    isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <div className="flex items-center justify-center gap-2">
+                      {isCorrect ? (
+                        <>
+                          <Check className="w-5 h-5 text-green-500" />
+                          <span className="text-green-700 font-medium">答案正确！</span>
+                        </>
+                      ) : (
+                        <>
+                          <X className="w-5 h-5 text-red-500" />
+                          <span className="text-red-700 font-medium">答案不正确，请再试一次</span>
+                        </>
+                      )}
+                    </div>
+                    {!isCorrect && activePuzzle.type !== 'matching' && (
+                      <button
+                        onClick={() => {
+                          setAnswerChecked(false);
+                          setIsCorrect(null);
+                        }}
+                        className="mt-2 text-sm text-red-600 hover:text-red-700 underline"
+                      >
+                        重新作答
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {activePuzzle.type === 'matching' && activePuzzle.data?.pairs && (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-500">将左侧的词汇与右侧的意思配对：</p>
+                    <p className="text-sm text-gray-500">将左侧的词汇与右侧的意思配对（点击左侧词汇，再点击右侧对应意思）：</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        {(activePuzzle.data.pairs as { left: string; right: string }[]).map((pair, idx) => (
+                        {activePuzzle.data.pairs.map((pair, idx) => (
                           <div
                             key={idx}
-                            className={`p-3 rounded-xl text-center font-medium ${puzzleRaceInfo.bgColor} ${puzzleRaceInfo.color} cursor-pointer hover:shadow-md transition-shadow`}
+                            onClick={() => handleMatchingClick('left', idx)}
+                            className={`p-3 rounded-xl text-center font-medium cursor-pointer transition-all ${
+                              matchedPairs.has(idx)
+                                ? 'bg-green-100 text-green-700 opacity-60'
+                                : selectedLeft === idx
+                                ? `${puzzleRaceInfo.bgColor} ${puzzleRaceInfo.color} ring-2 ring-purple-400 shadow-lg`
+                                : `${puzzleRaceInfo.bgColor} ${puzzleRaceInfo.color} hover:shadow-md`
+                            }`}
                           >
                             {pair.left}
+                            {matchedPairs.has(idx) && <Check className="w-4 h-4 inline ml-2" />}
                           </div>
                         ))}
                       </div>
                       <div className="space-y-2">
-                        {(activePuzzle.data.pairs as { left: string; right: string }[])
-                          .sort(() => Math.random() - 0.5)
-                          .map((pair, idx) => (
+                        {shuffledRights.map((pair, idx) => {
+                          const originalIndex = activePuzzle.data.pairs.findIndex(
+                            (p) => p.left === pair.left && p.right === pair.right
+                          );
+                          const isMatched = matchedPairs.has(originalIndex);
+                          return (
                             <div
                               key={idx}
-                              className="p-3 rounded-xl text-center font-medium bg-gray-100 text-gray-600 cursor-pointer hover:bg-gray-200 transition-colors"
+                              onClick={() => handleMatchingClick('right', idx)}
+                              className={`p-3 rounded-xl text-center font-medium cursor-pointer transition-all ${
+                                isMatched
+                                  ? 'bg-green-100 text-green-700 opacity-60'
+                                  : selectedRight === idx
+                                  ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-400 shadow-lg'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
                             >
                               {pair.right}
+                              {isMatched && <Check className="w-4 h-4 inline ml-2" />}
                             </div>
-                          ))}
+                          );
+                        })}
                       </div>
                     </div>
-                    <p className="text-xs text-gray-400 text-center">（点击配对，演示模式）</p>
+                    <p className="text-xs text-gray-400 text-center">
+                      已配对：{matchedPairs.size} / {activePuzzle.data.pairs.length}
+                    </p>
                   </div>
                 )}
 
                 {activePuzzle.type === 'translate' && activePuzzle.data?.question && (
                   <div className="space-y-4">
                     <div className="bg-white/50 rounded-xl p-4 border-2 border-dashed border-purple-200">
-                      <p className="text-sm text-gray-600 mb-2">{activePuzzle.data.question}</p>
-                      <div className="text-center py-4">
-                        <p className="text-2xl font-fairy text-fairy-purple">
-                          {activePuzzle.data.answer}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">（点击验证按钮查看答案）</p>
+                      <p className="text-sm text-gray-600 mb-4">{activePuzzle.data.question}</p>
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={userAnswer}
+                          onChange={(e) => setUserAnswer(e.target.value)}
+                          placeholder="请输入翻译结果..."
+                          disabled={answerChecked && isCorrect === true}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-purple-200 focus:border-purple-400 focus:outline-none text-center text-lg font-fairy bg-white disabled:bg-gray-50"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !answerChecked) {
+                              checkAnswer();
+                            }
+                          }}
+                        />
+                        {answerChecked && isCorrect === false && (
+                          <p className="text-xs text-gray-500 text-center">
+                            正确答案：<span className={puzzleRaceInfo.color}>{activePuzzle.data.answer}</span>
+                          </p>
+                        )}
+                        {answerChecked && isCorrect === true && activePuzzle.data.answer && (
+                          <p className="text-sm text-center">
+                            <span className={`text-lg font-fairy ${puzzleRaceInfo.color}`}>
+                              {activePuzzle.data.answer}
+                            </span>
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -766,17 +932,48 @@ export default function LanguageDecipher() {
                 {activePuzzle.type === 'fillBlank' && activePuzzle.data?.sentence && (
                   <div className="space-y-4">
                     <div className="bg-white/50 rounded-xl p-4 border-2 border-dashed border-purple-200">
-                      <p className="text-lg font-medium text-center">
+                      <p className="text-lg font-medium text-center mb-4">
                         {activePuzzle.data.sentence}
                       </p>
-                      <p className="text-sm text-gray-500 text-center mt-2">
-                        答案：<span className={puzzleRaceInfo.color}>{activePuzzle.data.answer}</span>
-                      </p>
-                      {activePuzzle.data.meaning && (
-                        <p className="text-xs text-gray-400 text-center mt-1">
-                          意为：{activePuzzle.data.meaning}
-                        </p>
-                      )}
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={userAnswer}
+                          onChange={(e) => setUserAnswer(e.target.value)}
+                          placeholder="请输入填空答案..."
+                          disabled={answerChecked && isCorrect === true}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-purple-200 focus:border-purple-400 focus:outline-none text-center text-lg font-fairy bg-white disabled:bg-gray-50"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !answerChecked) {
+                              checkAnswer();
+                            }
+                          }}
+                        />
+                        {answerChecked && isCorrect === false && (
+                          <div className="text-center">
+                            <p className="text-xs text-gray-500">
+                              正确答案：<span className={puzzleRaceInfo.color}>{activePuzzle.data.answer}</span>
+                            </p>
+                            {activePuzzle.data.meaning && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                意为：{activePuzzle.data.meaning}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {answerChecked && isCorrect === true && (
+                          <div className="text-center">
+                            <p className={`text-lg font-fairy ${puzzleRaceInfo.color}`}>
+                              {activePuzzle.data.answer}
+                            </p>
+                            {activePuzzle.data.meaning && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                意为：{activePuzzle.data.meaning}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -784,8 +981,8 @@ export default function LanguageDecipher() {
                 {activePuzzle.type === 'anagram' && activePuzzle.data?.letters && (
                   <div className="space-y-4">
                     <p className="text-sm text-gray-500">重新排列这些字母，组成正确的单词：</p>
-                    <div className="flex justify-center gap-2 flex-wrap">
-                      {(activePuzzle.data.letters as string[]).map((letter, idx) => (
+                    <div className="flex justify-center gap-2 flex-wrap mb-4">
+                      {activePuzzle.data.letters.map((letter, idx) => (
                         <div
                           key={idx}
                           className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold ${puzzleRaceInfo.bgColor} ${puzzleRaceInfo.color} shadow-md`}
@@ -794,15 +991,43 @@ export default function LanguageDecipher() {
                         </div>
                       ))}
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm text-gray-500">答案：</p>
-                      <p className={`text-2xl font-fairy ${puzzleRaceInfo.color}`}>
-                        {activePuzzle.data.answer}
-                      </p>
-                      {activePuzzle.data.meaning && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          意为：{activePuzzle.data.meaning}
-                        </p>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={userAnswer}
+                        onChange={(e) => setUserAnswer(e.target.value)}
+                        placeholder="请输入重组后的单词..."
+                        disabled={answerChecked && isCorrect === true}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-purple-200 focus:border-purple-400 focus:outline-none text-center text-lg font-fairy bg-white disabled:bg-gray-50"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !answerChecked) {
+                            checkAnswer();
+                          }
+                        }}
+                      />
+                      {answerChecked && isCorrect === false && (
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500">
+                            正确答案：<span className={puzzleRaceInfo.color}>{activePuzzle.data.answer}</span>
+                          </p>
+                          {activePuzzle.data.meaning && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              意为：{activePuzzle.data.meaning}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {answerChecked && isCorrect === true && (
+                        <div className="text-center">
+                          <p className={`text-2xl font-fairy ${puzzleRaceInfo.color}`}>
+                            {activePuzzle.data.answer}
+                          </p>
+                          {activePuzzle.data.meaning && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              意为：{activePuzzle.data.meaning}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -815,7 +1040,7 @@ export default function LanguageDecipher() {
                       <span className="text-sm font-medium text-amber-700">提示</span>
                     </div>
                     <p className="text-sm text-amber-600">
-                      {(activePuzzle.data.hints as string[])[hintIndex]}
+                      {activePuzzle.data.hints[hintIndex]}
                     </p>
                   </div>
                 )}
@@ -829,6 +1054,7 @@ export default function LanguageDecipher() {
                 <button
                   onClick={handleNextHint}
                   className="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700"
+                  disabled={answerChecked && isCorrect === true}
                 >
                   <Lightbulb className="w-4 h-4" />
                   提示
@@ -840,13 +1066,25 @@ export default function LanguageDecipher() {
                   >
                     关闭
                   </button>
-                  <button
-                    onClick={handleSolvePuzzle}
-                    className="fairy-button text-sm py-2 px-6"
-                  >
-                    <Check className="w-4 h-4 inline mr-1" />
-                    验证答案
-                  </button>
+                  {activePuzzle.type === 'matching' ? (
+                    <button
+                      onClick={checkAnswer}
+                      disabled={matchedPairs.size !== activePuzzle.data.pairs?.length}
+                      className="fairy-button text-sm py-2 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Check className="w-4 h-4 inline mr-1" />
+                      完成配对
+                    </button>
+                  ) : (
+                    <button
+                      onClick={checkAnswer}
+                      disabled={!userAnswer.trim() || (answerChecked && isCorrect === true)}
+                      className="fairy-button text-sm py-2 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Check className="w-4 h-4 inline mr-1" />
+                      验证答案
+                    </button>
+                  )}
                 </div>
               </>
             ) : (

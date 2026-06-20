@@ -472,6 +472,37 @@ export const elvenPuzzles: WordPuzzle[] = [
       hints: ['朋友的精灵语是...', '它以M开头'],
     },
   },
+  {
+    id: 'elv_puzzle_4',
+    race: '精灵',
+    type: 'translate',
+    title: '星辰之子',
+    description: '将"花之精灵"翻译成精灵语。',
+    difficulty: '初级',
+    rewardWordIds: ['elv_word_6'],
+    experienceReward: 100,
+    data: {
+      question: '请将"花之精灵"翻译成精灵语（提示：精灵的自称是Elar）',
+      answer: 'Elar Loth',
+      hints: ['花的精灵语是Loth', '精灵的精灵语是Elar', '形容词放在名词之后'],
+    },
+  },
+  {
+    id: 'elv_puzzle_5',
+    race: '精灵',
+    type: 'anagram',
+    title: '勇士之名',
+    description: '重组字母，找出精灵语中"勇敢的"词汇。',
+    difficulty: '中级',
+    rewardWordIds: ['elv_word_7'],
+    experienceReward: 150,
+    data: {
+      letters: ['T', 'H', 'A', 'L', 'I', 'O', 'N'],
+      answer: 'Thalion',
+      meaning: '勇敢的/强壮的',
+      hints: ['精灵英雄的名字', '它以T开头', '共7个字母'],
+    },
+  },
 ];
 
 export const dragonPuzzles: WordPuzzle[] = [
@@ -522,6 +553,21 @@ export const dragonPuzzles: WordPuzzle[] = [
       letters: ['M', 'O', 'R', 'G', 'H'],
       answer: 'Morgh',
       meaning: '黑暗/阴影',
+    },
+  },
+  {
+    id: 'drg_puzzle_4',
+    race: '龙',
+    type: 'translate',
+    title: '永恒之龙',
+    description: '将"永恒之龙"翻译成龙语。',
+    difficulty: '高级',
+    rewardWordIds: ['drg_word_8'],
+    experienceReward: 200,
+    data: {
+      question: '请将"永恒之龙"翻译成龙语（提示：永恒的龙语是Azhir）',
+      answer: 'Drak azhir',
+      hints: ['龙的龙语是Drak', '永恒的龙语是Azhir', '形容词放在名词之后'],
     },
   },
 ];
@@ -575,6 +621,21 @@ export const sirenPuzzles: WordPuzzle[] = [
       question: '请将"海妖之歌"翻译成海妖语',
       answer: 'Nixe sereia',
       hints: ['歌的海妖语是Nixe', '海妖的海妖语是Sereia', '形容词/修饰词放在后面'],
+    },
+  },
+  {
+    id: 'srn_puzzle_4',
+    race: '海妖',
+    type: 'translate',
+    title: '深渊之谜',
+    description: '将"深邃的深渊"翻译成海妖语。',
+    difficulty: '高级',
+    rewardWordIds: ['srn_word_8'],
+    experienceReward: 200,
+    data: {
+      question: '请将"深邃的深渊"翻译成海妖语（提示：深渊的海妖语是Abyssia）',
+      answer: 'Abyssia lumi',
+      hints: ['深的海妖语是lumi', '深渊的海妖语是Abyssia', '形容词放在名词之后'],
     },
   },
 ];

@@ -175,6 +175,17 @@ export default function FairyTheater() {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (store.editorMode !== 'edit' || !store.selectedInstanceId) return;
 
+    const active = document.activeElement;
+    const tag = active?.tagName?.toLowerCase();
+    if (
+      tag === 'input' ||
+      tag === 'textarea' ||
+      tag === 'select' ||
+      (active as HTMLElement | null)?.isContentEditable
+    ) {
+      return;
+    }
+
     const step = 0.01;
     const instance = currentScene?.placedAssets.find(
       (p) => p.instanceId === store.selectedInstanceId
@@ -204,6 +215,7 @@ export default function FairyTheater() {
         break;
       case 'Delete':
       case 'Backspace':
+        e.preventDefault();
         store.removePlacedAsset(store.currentSceneIndex, instance.instanceId);
         break;
     }
@@ -302,6 +314,238 @@ export default function FairyTheater() {
   );
   const selectedAsset = selectedInstance ? getAssetById(selectedInstance.assetId) : undefined;
 
+  const quickCharacters = [
+    { name: '小公主', emoji: '👸', color: '#FFB6C1' },
+    { name: '小王子', emoji: '🤴', color: '#A5D8FF' },
+    { name: '国王', emoji: '👑', color: '#FFD700' },
+    { name: '王后', emoji: '👸', color: '#E6E6FA' },
+    { name: '小仙女', emoji: '🧚', color: '#DDA0DD' },
+    { name: '女巫', emoji: '🧙‍♀️', color: '#9370DB' },
+    { name: '巫师', emoji: '🧙‍♂️', color: '#4B0082' },
+    { name: '小矮人', emoji: '🧔', color: '#8B4513' },
+    { name: '精灵', emoji: '🧝', color: '#90EE90' },
+    { name: '美人鱼', emoji: '🧜‍♀️', color: '#00CED1' },
+    { name: '大灰狼', emoji: '🐺', color: '#696969' },
+    { name: '旁白', emoji: '📖', color: '#6366F1' },
+  ];
+
+  // ======= PLAY MODE (纯净播放界面) =======
+  if (store.editorMode === 'play' && playScene) {
+    return (
+      <div className="min-h-screen relative bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+        <FloatingDecorations />
+
+        {/* 极简顶部控制栏 */}
+        <div className="sticky top-0 z-50 backdrop-blur-lg bg-black/30 border-b border-white/10">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-fairy flex items-center justify-center flex-shrink-0 shadow-fairy">
+                <Film className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-fairy text-white text-lg truncate">
+                  {store.currentPerformance.title || '未命名童话剧'}
+                </h1>
+                <p className="text-white/60 text-xs font-body">
+                  第 {store.playingSceneIndex + 1} / {store.currentPerformance.scenes.length} 幕
+                  {playScene.dialogues.length > 0 && ` · 对白 ${store.playingDialogueIndex + 1}/${playScene.dialogues.length}`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => store.setPlayingSceneIndex(Math.max(0, store.playingSceneIndex - 1))}
+                disabled={store.playingSceneIndex === 0}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white flex items-center justify-center transition-all backdrop-blur-sm"
+                title="上一幕"
+              >
+                <SkipBack className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={togglePlayPause}
+                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-body text-sm transition-all shadow-lg backdrop-blur-sm ${
+                  store.isPlaying
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                    : 'bg-gradient-fairy text-white hover:shadow-fairy-lg'
+                }`}
+              >
+                {store.isPlaying ? (
+                  <>
+                    <Pause className="w-5 h-5" />
+                    暂停
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5" />
+                    播放
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => store.nextPlaybackStep()}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all backdrop-blur-sm"
+                title="下一幕/下一句对白"
+              >
+                <SkipForward className="w-5 h-5" />
+              </button>
+
+              <div className="w-px h-7 bg-white/20 mx-1" />
+
+              <button
+                onClick={store.stopPlayback}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 hover:bg-red-500/30 border border-white/20 hover:border-red-300/50 text-white font-body text-sm transition-all backdrop-blur-sm"
+              >
+                <Square className="w-4 h-4" />
+                <span className="hidden sm:inline">停止</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 进度条 */}
+          <div className="container mx-auto px-4 pb-3">
+            <div className="flex items-center gap-2">
+              {store.currentPerformance.scenes.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`h-1.5 flex-1 rounded-full transition-all ${
+                    idx < store.playingSceneIndex
+                      ? 'bg-fairy-purple'
+                      : idx === store.playingSceneIndex
+                        ? 'bg-gradient-fairy animate-pulse'
+                        : 'bg-white/15'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 舞台区域 - 居中放大展示 */}
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          <div
+            className={`relative w-full rounded-3xl md:rounded-[2.5rem] overflow-hidden shadow-2xl aspect-video max-w-6xl mx-auto bg-gradient-to-br ${playBg?.gradient}`}
+            style={{ minHeight: '450px' }}
+          >
+            {/* 背景装饰大图 */}
+            <div className="absolute inset-0 flex items-center justify-center text-[20rem] md:text-[28rem] opacity-10 pointer-events-none select-none">
+              {playBg?.emoji}
+            </div>
+
+            {/* 舞台元素 */}
+            {playScene.placedAssets.map((placed) => {
+              const asset = getAssetById(placed.assetId);
+              if (!asset) return null;
+              return (
+                <div
+                  key={placed.instanceId}
+                  className={`absolute ${getAnimationClass(placed.animation)}`}
+                  style={{
+                    left: `${placed.x * 100}%`,
+                    top: `${placed.y * 100}%`,
+                    transform: `translate(-50%, -50%) scale(${placed.scale}) rotate(${placed.rotation}deg)`,
+                    zIndex: placed.zIndex,
+                  }}
+                >
+                  <div className="text-6xl md:text-8xl select-none drop-shadow-2xl">
+                    {asset.emoji}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* 对白气泡 */}
+            {currentDialogue && (
+              <div className="absolute bottom-8 left-8 right-8 z-30">
+                <div className="flex items-end gap-4 max-w-3xl mx-auto">
+                  <div
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl flex items-center justify-center text-4xl md:text-5xl shadow-2xl border-4 border-white flex-shrink-0"
+                    style={{ backgroundColor: `${currentDialogue.color}60` }}
+                  >
+                    {currentDialogue.speakerEmoji}
+                  </div>
+                  <div className="flex-1">
+                    <div
+                      className="text-sm md:text-base font-body font-black mb-2 px-1 tracking-wide"
+                      style={{ color: currentDialogue.color, textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}
+                    >
+                      {currentDialogue.speakerName || '神秘角色'}
+                    </div>
+                    <div className="dialogue-bubble shadow-2xl">
+                      <p className="font-body text-gray-700 text-base md:text-lg leading-relaxed">
+                        {currentDialogue.text || '（沉默中...）'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 旁白字幕 */}
+            {playScene.narrative && !currentDialogue && (
+              <div className="absolute inset-x-8 bottom-10 z-30">
+                <div className="max-w-3xl mx-auto bg-black/70 backdrop-blur-md rounded-3xl p-6 md:p-8 text-center shadow-2xl border border-white/10">
+                  <p className="font-body text-white text-lg md:text-2xl leading-relaxed">
+                    {playScene.narrative}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 幕名称 */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30">
+              <div className="px-5 py-2 rounded-full bg-black/40 backdrop-blur-md text-white font-fairy text-sm md:text-base shadow-lg border border-white/10">
+                {playScene.name}
+              </div>
+            </div>
+
+            {/* 播放中指示器 */}
+            {store.isPlaying && (
+              <div className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/80 backdrop-blur-md text-white text-xs font-body shadow-lg">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                LIVE
+              </div>
+            )}
+          </div>
+
+          {/* 底部快捷跳转 */}
+          <div className="max-w-6xl mx-auto mt-6 flex items-center justify-center gap-2 overflow-x-auto pb-2">
+            {store.currentPerformance.scenes.map((scene, idx) => {
+              const bg = getBackgroundById(scene.backgroundId);
+              return (
+                <button
+                  key={scene.id}
+                  onClick={() => store.setPlayingSceneIndex(idx)}
+                  className={`flex-shrink-0 w-14 h-10 md:w-16 md:h-12 rounded-xl overflow-hidden transition-all border-2 ${
+                    store.playingSceneIndex === idx
+                      ? 'border-white scale-110 shadow-xl'
+                      : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'
+                  } bg-gradient-to-br ${bg?.gradient}`}
+                  title={scene.name}
+                >
+                  <div className="w-full h-full flex items-center justify-center text-xl md:text-2xl opacity-80">
+                    {bg?.emoji}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Save Toast */}
+        {showSaveModal && (
+          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 animate-bounce-soft">
+            <Save className="w-5 h-5" />
+            <span className="font-body">保存成功！</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ======= EDIT MODE (编辑界面) =======
   return (
     <div className="min-h-screen relative">
       <FloatingDecorations />
@@ -346,33 +590,10 @@ export default function FairyTheater() {
                 ) : (
                   <>
                     <Play className="w-4 h-4" />
-                    {store.editorMode === 'play' ? '继续播放' : '开始演出'}
+                    开始演出
                   </>
                 )}
               </button>
-
-              {store.editorMode === 'play' && (
-                <>
-                  <button
-                    onClick={() => store.setPlayingSceneIndex(Math.max(0, store.playingSceneIndex - 1))}
-                    className="p-2 rounded-full bg-white/70 border border-fairy-purple/20 hover:bg-fairy-purple/10 transition-colors"
-                  >
-                    <SkipBack className="w-4 h-4 text-fairy-purple" />
-                  </button>
-                  <button
-                    onClick={() => store.nextPlaybackStep()}
-                    className="p-2 rounded-full bg-white/70 border border-fairy-purple/20 hover:bg-fairy-purple/10 transition-colors"
-                  >
-                    <SkipForward className="w-4 h-4 text-fairy-purple" />
-                  </button>
-                  <button
-                    onClick={store.stopPlayback}
-                    className="p-2 rounded-full bg-white/70 border border-red-300 hover:bg-red-50 transition-colors"
-                  >
-                    <Square className="w-4 h-4 text-red-500" />
-                  </button>
-                </>
-              )}
 
               <div className="w-px h-6 bg-fairy-purple/20 mx-1 hidden sm:block" />
 
@@ -433,102 +654,6 @@ export default function FairyTheater() {
             </div>
           </div>
         </div>
-
-        {/* Play Mode */}
-        {store.editorMode === 'play' && playScene && (
-          <div className="mb-4">
-            <div className="fairy-card p-2 mb-3">
-              <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-fairy flex items-center justify-center">
-                    <Eye className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-fairy text-gray-800">{playScene.name}</h3>
-                    <p className="text-xs text-gray-500 font-body">
-                      第 {store.playingSceneIndex + 1} / {store.currentPerformance.scenes.length} 幕
-                      {playScene.dialogues.length > 0 && ` · 对白 ${store.playingDialogueIndex + 1}/${playScene.dialogues.length}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-sm font-body text-gray-500 flex items-center gap-2">
-                  {store.isPlaying && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-600 text-xs animate-pulse">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
-                      播放中
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Play Stage */}
-            <div
-              className={`relative w-full rounded-3xl overflow-hidden shadow-fairy-lg aspect-video bg-gradient-to-br ${playBg?.gradient}`}
-              style={{ minHeight: '400px' }}
-            >
-              {playScene.placedAssets.map((placed) => {
-                const asset = getAssetById(placed.assetId);
-                if (!asset) return null;
-                return (
-                  <div
-                    key={placed.instanceId}
-                    className={`absolute ${getAnimationClass(placed.animation)}`}
-                    style={{
-                      left: `${placed.x * 100}%`,
-                      top: `${placed.y * 100}%`,
-                      transform: `translate(-50%, -50%) scale(${placed.scale}) rotate(${placed.rotation}deg)`,
-                      zIndex: placed.zIndex,
-                    }}
-                  >
-                    <div className="text-6xl md:text-7xl select-none drop-shadow-lg">
-                      {asset.emoji}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Dialogues */}
-              {currentDialogue && (
-                <div className="absolute bottom-6 left-6 right-6 z-30">
-                  <div className="flex items-end gap-3">
-                    <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-lg border-2 border-white flex-shrink-0"
-                      style={{ backgroundColor: `${currentDialogue.color}40` }}
-                    >
-                      {currentDialogue.speakerEmoji}
-                    </div>
-                    <div className="flex-1">
-                      <div
-                        className="text-xs font-body font-bold mb-1 px-1"
-                        style={{ color: currentDialogue.color }}
-                      >
-                        {currentDialogue.speakerName}
-                      </div>
-                      <div className="dialogue-bubble">
-                        <p className="font-body text-gray-700 leading-relaxed">
-                          {currentDialogue.text || '（沉默中...）'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Narrative overlay */}
-              {playScene.narrative && playScene.dialogues.length === 0 && (
-                <div className="absolute inset-x-6 bottom-6 z-30">
-                  <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-5 text-center">
-                    <p className="font-body text-white text-lg leading-relaxed">
-                      {playScene.narrative}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-            return;
-          </div>
-        )}
 
         {/* Edit Mode Main Layout */}
         <div className="grid grid-cols-12 gap-4">
@@ -920,11 +1045,61 @@ export default function FairyTheater() {
                       </button>
                     </div>
 
+                    {/* 快捷角色选择 */}
+                    <div className="bg-white/70 rounded-xl p-3 border border-fairy-purple/10">
+                      <p className="text-[11px] font-body text-gray-400 mb-2 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        点击下方角色快速填入编辑中的对白：
+                      </p>
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {quickCharacters.map((qc, qi) => (
+                          <button
+                            key={qi}
+                            onClick={() => {
+                              const dlg = currentScene?.dialogues.find((d) => d);
+                              const lastId = currentScene?.dialogues[currentScene.dialogues.length - 1]?.id;
+                              if (lastId) {
+                                store.updateDialogue(store.currentSceneIndex, lastId, {
+                                  speakerName: qc.name,
+                                  speakerEmoji: qc.emoji,
+                                  color: qc.color,
+                                });
+                              } else {
+                                store.addDialogue(store.currentSceneIndex);
+                                setTimeout(() => {
+                                  const newLast = useTheaterStore.getState().currentPerformance.scenes[store.currentSceneIndex].dialogues;
+                                  if (newLast.length > 0) {
+                                    store.updateDialogue(store.currentSceneIndex, newLast[newLast.length - 1].id, {
+                                      speakerName: qc.name,
+                                      speakerEmoji: qc.emoji,
+                                      color: qc.color,
+                                    });
+                                  }
+                                }, 0);
+                              }
+                            }}
+                            className="group relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg hover:bg-fairy-purple/10 transition-colors border border-transparent hover:border-fairy-purple/20"
+                            title={`${qc.name} ${qc.emoji}`}
+                          >
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-xl"
+                              style={{ backgroundColor: `${qc.color}30` }}
+                            >
+                              {qc.emoji}
+                            </div>
+                            <span className="text-[9px] font-body text-gray-500 truncate w-full text-center">
+                              {qc.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {currentScene?.dialogues.length === 0 ? (
                       <div className="text-center py-8 bg-white/40 rounded-xl">
                         <MessageSquare className="w-10 h-10 text-fairy-purple/30 mx-auto mb-2" />
                         <p className="text-sm text-gray-400 font-body">还没有对白</p>
-                        <p className="text-xs text-gray-300 font-body">点击上方按钮添加第一句对白</p>
+                        <p className="text-xs text-gray-300 font-body">点击上方按钮或快捷角色添加</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -940,13 +1115,42 @@ export default function FairyTheater() {
                               >
                                 对话 {idx + 1}
                               </span>
-                              <button
-                                onClick={() => store.removeDialogue(store.currentSceneIndex, dlg.id)}
-                                className="p-1 rounded-md hover:bg-red-50 text-red-400 transition-colors"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  onClick={() => store.removeDialogue(store.currentSceneIndex, dlg.id)}
+                                  className="p-1 rounded-md hover:bg-red-50 text-red-400 transition-colors"
+                                  title="删除这句对白"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
+
+                            {/* 快捷填充：此对白的角色一键选择 */}
+                            <div className="flex flex-wrap items-center gap-1 pt-1">
+                              <span className="text-[10px] text-gray-400 font-body mr-1">快捷:</span>
+                              {quickCharacters.slice(0, 8).map((qc, qi) => (
+                                <button
+                                  key={qi}
+                                  onClick={() =>
+                                    store.updateDialogue(store.currentSceneIndex, dlg.id, {
+                                      speakerName: qc.name,
+                                      speakerEmoji: qc.emoji,
+                                      color: qc.color,
+                                    })
+                                  }
+                                  className={`w-6 h-6 rounded-md flex items-center justify-center text-sm hover:scale-110 transition-transform ${
+                                    dlg.speakerEmoji === qc.emoji && dlg.speakerName === qc.name
+                                      ? 'ring-2 ring-fairy-purple bg-fairy-purple/10'
+                                      : 'hover:bg-gray-100'
+                                  }`}
+                                  title={`使用${qc.name}`}
+                                >
+                                  {qc.emoji}
+                                </button>
+                              ))}
+                            </div>
+
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
@@ -963,12 +1167,30 @@ export default function FairyTheater() {
                                 placeholder="说话角色名"
                               />
                             </div>
-                            <input
-                              type="color"
-                              value={dlg.color}
-                              onChange={(e) => store.updateDialogue(store.currentSceneIndex, dlg.id, { color: e.target.value })}
-                              className="w-full h-8 rounded-lg border border-gray-200 cursor-pointer"
-                            />
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={dlg.color}
+                                onChange={(e) => store.updateDialogue(store.currentSceneIndex, dlg.id, { color: e.target.value })}
+                                className="w-10 h-8 rounded-lg border border-gray-200 cursor-pointer flex-shrink-0"
+                                title="对白颜色"
+                              />
+                              <div className="flex flex-wrap items-center gap-1 flex-1">
+                                {['#FFB6C1', '#A5D8FF', '#FFD700', '#9370DB', '#90EE90', '#6366F1'].map((c) => (
+                                  <button
+                                    key={c}
+                                    onClick={() => store.updateDialogue(store.currentSceneIndex, dlg.id, { color: c })}
+                                    className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${
+                                      dlg.color.toLowerCase() === c.toLowerCase() ? 'border-gray-600 scale-110' : 'border-white shadow'
+                                    }`}
+                                    style={{ backgroundColor: c }}
+                                    title="快速选色"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+
                             <textarea
                               value={dlg.text}
                               onChange={(e) => store.updateDialogue(store.currentSceneIndex, dlg.id, { text: e.target.value })}
@@ -976,6 +1198,28 @@ export default function FairyTheater() {
                               placeholder="输入角色说的话..."
                               className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-body focus:outline-none focus:ring-2 focus:ring-fairy-purple/30 resize-none"
                             />
+
+                            {/* 快速对白模板 */}
+                            <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-gray-100">
+                              <span className="text-[10px] text-gray-400 font-body">模板:</span>
+                              {[
+                                '你好呀！',
+                                '真的吗？太神奇了！',
+                                '我相信你一定可以的！',
+                                '让我们一起冒险吧！',
+                                '再见了，朋友们！',
+                              ].map((tpl) => (
+                                <button
+                                  key={tpl}
+                                  onClick={() =>
+                                    store.updateDialogue(store.currentSceneIndex, dlg.id, { text: tpl })
+                                  }
+                                  className="px-2 py-0.5 rounded-full bg-gray-100 hover:bg-fairy-purple/10 text-[10px] font-body text-gray-500 hover:text-fairy-purple transition-colors"
+                                >
+                                  {tpl}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>

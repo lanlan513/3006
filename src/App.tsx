@@ -14,6 +14,7 @@ import CourseDetail from '@/pages/CourseDetail';
 import CosmicEvents from '@/pages/CosmicEvents';
 import DreamWorld from '@/pages/DreamWorld';
 import HistoryArchive from '@/pages/HistoryArchive';
+import LanguageDecipher from '@/pages/LanguageDecipher';
 import { useStoryStore } from '@/store/storyStore';
 
 const DAY_NIGHT_INTERVAL_MS = 60000;
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/cosmic-events" element={<CosmicEvents />} />
         <Route path="/dream-world" element={<DreamWorld />} />
         <Route path="/history-archive" element={<HistoryArchive />} />
+        <Route path="/language-decipher" element={<LanguageDecipher />} />
       </Routes>
     </Router>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe, Wand2, ScrollText, Film, GraduationCap, Zap, Moon, Sun, CloudSun, Library } from 'lucide-react';
+import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe, Wand2, ScrollText, Film, GraduationCap, Zap, Moon, Sun, CloudSun, Library, Languages } from 'lucide-react';
 import { useStoryStore } from '@/store/storyStore';
 
 export default function Navbar() {
@@ -137,6 +137,17 @@ export default function Navbar() {
                 历史馆
               </span>
               <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-amber-500 animate-twinkle" />
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
+            </Link>
+            <Link
+              to="/language-decipher"
+              className="font-body text-gray-700 hover:text-fairy-purple transition-colors duration-300 relative group"
+            >
+              <span className="inline-flex items-center gap-1">
+                <Languages className="w-4 h-4 inline-block" />
+                语言破译所
+              </span>
+              <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-emerald-500 animate-twinkle" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
             </Link>
 
@@ -279,6 +290,17 @@ export default function Navbar() {
                 <Library className="w-4 h-4" />
                 童话历史馆
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-twinkle" />
+              </span>
+            </Link>
+            <Link
+              to="/language-decipher"
+              className="block font-body text-gray-700 hover:text-fairy-purple transition-colors py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Languages className="w-4 h-4" />
+                语言破译所
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-twinkle" />
               </span>
             </Link>
             <form onSubmit={handleSearch} className="relative">

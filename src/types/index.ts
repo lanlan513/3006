@@ -1055,3 +1055,178 @@ export interface EraSummary {
   keyFigures: string[];
   characteristics: string[];
 }
+
+export type LanguageRace = '精灵' | '龙' | '海妖';
+
+export const LANGUAGE_RACES: LanguageRace[] = ['精灵', '龙', '海妖'];
+
+export const LANGUAGE_RACE_INFO: Record<LanguageRace, { name: string; emoji: string; color: string; bgColor: string; description: string }> = {
+  '精灵': {
+    name: '精灵语',
+    emoji: '🧝',
+    color: 'text-emerald-600',
+    bgColor: 'from-emerald-100 to-teal-100',
+    description: '优美流畅的古老语言，每个音节都蕴含着自然的韵律',
+  },
+  '龙': {
+    name: '龙语',
+    emoji: '🐉',
+    color: 'text-red-600',
+    bgColor: 'from-red-100 to-orange-100',
+    description: '雄浑有力的远古语言，每个字都带着烈焰的威严',
+  },
+  '海妖': {
+    name: '海妖语',
+    emoji: '🧜',
+    color: 'text-cyan-600',
+    bgColor: 'from-cyan-100 to-blue-100',
+    description: '悠扬婉转的深海语言，每个词都如同海浪般起伏',
+  },
+};
+
+export interface LanguageWord {
+  id: string;
+  race: LanguageRace;
+  word: string;
+  pronunciation: string;
+  meaning: string;
+  partOfSpeech: string;
+  example: string;
+  exampleTranslation: string;
+  difficulty: '入门' | '初级' | '中级' | '高级';
+  unlocked: boolean;
+  unlockCondition?: string;
+  etymology?: string;
+}
+
+export interface GrammarRule {
+  id: string;
+  race: LanguageRace;
+  title: string;
+  description: string;
+  examples: { original: string; translation: string; explanation: string }[];
+  difficulty: '入门' | '初级' | '中级' | '高级';
+  unlocked: boolean;
+  requiredWords?: string[];
+}
+
+interface PuzzlePair {
+  left: string;
+  right: string;
+}
+
+interface BasePuzzleData {
+  hints?: string[];
+}
+
+interface MatchingPuzzleData extends BasePuzzleData {
+  pairs: PuzzlePair[];
+}
+
+interface TranslatePuzzleData extends BasePuzzleData {
+  question: string;
+  answer: string;
+}
+
+interface FillBlankPuzzleData extends BasePuzzleData {
+  sentence: string;
+  answer: string;
+  meaning?: string;
+}
+
+interface AnagramPuzzleData extends BasePuzzleData {
+  letters: string[];
+  answer: string;
+  meaning?: string;
+}
+
+export type WordPuzzle =
+  | {
+      id: string;
+      race: LanguageRace;
+      type: 'matching';
+      title: string;
+      description: string;
+      difficulty: '入门' | '初级' | '中级' | '高级';
+      rewardWordIds: string[];
+      rewardGrammarIds?: string[];
+      data: MatchingPuzzleData;
+      experienceReward: number;
+    }
+  | {
+      id: string;
+      race: LanguageRace;
+      type: 'translate';
+      title: string;
+      description: string;
+      difficulty: '入门' | '初级' | '中级' | '高级';
+      rewardWordIds: string[];
+      rewardGrammarIds?: string[];
+      data: TranslatePuzzleData;
+      experienceReward: number;
+    }
+  | {
+      id: string;
+      race: LanguageRace;
+      type: 'fillBlank';
+      title: string;
+      description: string;
+      difficulty: '入门' | '初级' | '中级' | '高级';
+      rewardWordIds: string[];
+      rewardGrammarIds?: string[];
+      data: FillBlankPuzzleData;
+      experienceReward: number;
+    }
+  | {
+      id: string;
+      race: LanguageRace;
+      type: 'anagram';
+      title: string;
+      description: string;
+      difficulty: '入门' | '初级' | '中级' | '高级';
+      rewardWordIds: string[];
+      rewardGrammarIds?: string[];
+      data: AnagramPuzzleData;
+      experienceReward: number;
+    };
+
+export interface AncientStele {
+  id: string;
+  name: string;
+  race: LanguageRace;
+  location: string;
+  era: HistoricalEra;
+  coverEmoji: string;
+  coverColor: string;
+  originalText: string;
+  translatedText: string;
+  hiddenPlot?: string;
+  requiredWords: string[];
+  requiredGrammar: string[];
+  translationProgress: number;
+  discovered: boolean;
+  fullyTranslated: boolean;
+  storyRevelation?: string;
+  relatedStoryId?: string;
+}
+
+export interface LanguageProgress {
+  race: LanguageRace;
+  level: number;
+  experience: number;
+  unlockedWords: Set<string>;
+  unlockedGrammar: Set<string>;
+  completedPuzzles: Set<string>;
+  discoveredSteles: Set<string>;
+  translatedSteles: Set<string>;
+}
+
+export type DecipherTab = 'overview' | 'vocabulary' | 'grammar' | 'steles' | 'puzzles';
+
+export const DECIPHER_TABS: { id: DecipherTab; label: string; icon: string }[] = [
+  { id: 'overview', label: '总览', icon: '📖' },
+  { id: 'vocabulary', label: '词汇', icon: '📝' },
+  { id: 'grammar', label: '语法', icon: '📚' },
+  { id: 'steles', label: '古代石碑', icon: '🗿' },
+  { id: 'puzzles', label: '解谜', icon: '🧩' },
+];

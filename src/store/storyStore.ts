@@ -41,6 +41,12 @@ import type {
   InnerFear,
   DreamTab,
   DayNightPhase,
+  LanguageRace,
+  LanguageWord,
+  GrammarRule,
+  WordPuzzle,
+  AncientStele,
+  DecipherTab,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
@@ -67,6 +73,20 @@ import {
   getDreamLocationById,
   DREAM_EVOLUTION_TRIGGERS,
 } from '@/data/dreamWorld';
+import {
+  allWords,
+  allGrammar,
+  allPuzzles,
+  ancientSteles,
+  getWordById,
+  getGrammarById,
+  getPuzzleById,
+  getSteleById,
+  getWordsByRace,
+  getGrammarByRace,
+  getPuzzlesByRace,
+  getStelesByRace,
+} from '@/data/languages';
 
 interface StoryState {
   stories: Story[];
@@ -208,6 +228,44 @@ interface StoryState {
   setAutoDreamEnabled: (enabled: boolean) => void;
   getCurrentDreamLocations: () => DreamLocation[];
   getCurrentDreamState: () => CharacterDreamState | undefined;
+  languageWords: LanguageWord[];
+  languageGrammar: GrammarRule[];
+  languagePuzzles: WordPuzzle[];
+  ancientSteles: AncientStele[];
+  selectedDecipherTab: DecipherTab;
+  selectedLanguageRace: LanguageRace;
+  unlockedLanguageWords: Record<string, boolean>;
+  unlockedLanguageGrammar: Record<string, boolean>;
+  completedLanguagePuzzles: Set<string>;
+  discoveredSteles: Set<string>;
+  translatedSteles: Set<string>;
+  languageExperience: Record<LanguageRace, number>;
+  languageLevels: Record<LanguageRace, number>;
+  currentPuzzle: WordPuzzle | null;
+  currentStele: AncientStele | null;
+  setSelectedDecipherTab: (tab: DecipherTab) => void;
+  setSelectedLanguageRace: (race: LanguageRace) => void;
+  isWordUnlocked: (wordId: string) => boolean;
+  unlockWord: (wordId: string) => void;
+  isGrammarUnlocked: (grammarId: string) => boolean;
+  unlockGrammar: (grammarId: string) => void;
+  completePuzzle: (puzzleId: string) => void;
+  isPuzzleCompleted: (puzzleId: string) => boolean;
+  discoverStele: (steleId: string) => void;
+  isSteleDiscovered: (steleId: string) => boolean;
+  translateStele: (steleId: string) => void;
+  isSteleTranslated: (steleId: string) => boolean;
+  getWordsByRace: (race: LanguageRace) => LanguageWord[];
+  getGrammarByRace: (race: LanguageRace) => GrammarRule[];
+  getPuzzlesByRace: (race: LanguageRace) => WordPuzzle[];
+  getStelesByRace: (race: LanguageRace) => AncientStele[];
+  getUnlockedWordsByRace: (race: LanguageRace) => LanguageWord[];
+  getUnlockedGrammarByRace: (race: LanguageRace) => GrammarRule[];
+  addLanguageExperience: (race: LanguageRace, amount: number) => void;
+  getLanguageLevel: (race: LanguageRace) => number;
+  setCurrentPuzzle: (puzzle: WordPuzzle | null) => void;
+  setCurrentStele: (stele: AncientStele | null) => void;
+  canTranslateStele: (steleId: string) => boolean;
 }
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -277,6 +335,27 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   dayNightTimer: 0,
   autoDreamEnabled: false,
   lastNightDreamTriggered: false,
+  languageWords: allWords,
+  languageGrammar: allGrammar,
+  languagePuzzles: allPuzzles,
+  ancientSteles: ancientSteles,
+  selectedDecipherTab: 'overview',
+  selectedLanguageRace: '精灵',
+  unlockedLanguageWords: allWords.reduce((acc, word) => {
+    acc[word.id] = word.unlocked;
+    return acc;
+  }, {} as Record<string, boolean>),
+  unlockedLanguageGrammar: allGrammar.reduce((acc, grammar) => {
+    acc[grammar.id] = grammar.unlocked;
+    return acc;
+  }, {} as Record<string, boolean>),
+  completedLanguagePuzzles: new Set(),
+  discoveredSteles: new Set(ancientSteles.filter((s) => s.discovered).map((s) => s.id)),
+  translatedSteles: new Set(),
+  languageExperience: { '精灵': 0, '龙': 0, '海妖': 0 },
+  languageLevels: { '精灵': 1, '龙': 1, '海妖': 1 },
+  currentPuzzle: null,
+  currentStele: null,
 
   setSelectedDreamTab: (tab) => set({ selectedDreamTab: tab }),
   initDreamForCharacter: (characterId) => {
@@ -699,6 +778,139 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     if (newPhase === 'night' && !triggered) {
       set({ lastNightDreamTriggered: true });
     }
+  },
+
+  setSelectedDecipherTab: (tab) => set({ selectedDecipherTab: tab }),
+  setSelectedLanguageRace: (race) => set({ selectedLanguageRace: race }),
+  isWordUnlocked: (wordId) => {
+    return get().unlockedLanguageWords[wordId] || false;
+  },
+  unlockWord: (wordId) => {
+    const state = get();
+    if (state.unlockedLanguageWords[wordId]) return;
+    set({
+      unlockedLanguageWords: {
+        ...state.unlockedLanguageWords,
+        [wordId]: true,
+      },
+    });
+  },
+  isGrammarUnlocked: (grammarId) => {
+    return get().unlockedLanguageGrammar[grammarId] || false;
+  },
+  unlockGrammar: (grammarId) => {
+    const state = get();
+    if (state.unlockedLanguageGrammar[grammarId]) return;
+    set({
+      unlockedLanguageGrammar: {
+        ...state.unlockedLanguageGrammar,
+        [grammarId]: true,
+      },
+    });
+  },
+  completePuzzle: (puzzleId) => {
+    const state = get();
+    if (state.completedLanguagePuzzles.has(puzzleId)) return;
+    const puzzle = getPuzzleById(puzzleId);
+    if (!puzzle) return;
+    const newCompleted = new Set(state.completedLanguagePuzzles);
+    newCompleted.add(puzzleId);
+    const newUnlockedWords = { ...state.unlockedLanguageWords };
+    puzzle.rewardWordIds.forEach((wordId) => {
+      newUnlockedWords[wordId] = true;
+    });
+    const newUnlockedGrammar = { ...state.unlockedLanguageGrammar };
+    if (puzzle.rewardGrammarIds) {
+      puzzle.rewardGrammarIds.forEach((grammarId) => {
+        newUnlockedGrammar[grammarId] = true;
+      });
+    }
+    const newExp = { ...state.languageExperience };
+    newExp[puzzle.race] = (newExp[puzzle.race] || 0) + puzzle.experienceReward;
+    const newLevels = { ...state.languageLevels };
+    const expNeeded = newLevels[puzzle.race] * 200;
+    if (newExp[puzzle.race] >= expNeeded) {
+      newLevels[puzzle.race] = Math.min(10, newLevels[puzzle.race] + 1);
+    }
+    set({
+      completedLanguagePuzzles: newCompleted,
+      unlockedLanguageWords: newUnlockedWords,
+      unlockedLanguageGrammar: newUnlockedGrammar,
+      languageExperience: newExp,
+      languageLevels: newLevels,
+    });
+  },
+  isPuzzleCompleted: (puzzleId) => get().completedLanguagePuzzles.has(puzzleId),
+  discoverStele: (steleId) => {
+    const state = get();
+    if (state.discoveredSteles.has(steleId)) return;
+    const newDiscovered = new Set(state.discoveredSteles);
+    newDiscovered.add(steleId);
+    set({ discoveredSteles: newDiscovered });
+  },
+  isSteleDiscovered: (steleId) => get().discoveredSteles.has(steleId),
+  translateStele: (steleId) => {
+    const state = get();
+    if (state.translatedSteles.has(steleId)) return;
+    if (!state.canTranslateStele(steleId)) return;
+    const newTranslated = new Set(state.translatedSteles);
+    newTranslated.add(steleId);
+    const stele = getSteleById(steleId);
+    if (stele) {
+      const newExp = { ...state.languageExperience };
+      newExp[stele.race] = (newExp[stele.race] || 0) + 300;
+      const newLevels = { ...state.languageLevels };
+      const expNeeded = newLevels[stele.race] * 200;
+      if (newExp[stele.race] >= expNeeded) {
+        newLevels[stele.race] = Math.min(10, newLevels[stele.race] + 1);
+      }
+      set({
+        translatedSteles: newTranslated,
+        languageExperience: newExp,
+        languageLevels: newLevels,
+      });
+      return;
+    }
+    set({ translatedSteles: newTranslated });
+  },
+  isSteleTranslated: (steleId) => get().translatedSteles.has(steleId),
+  getWordsByRace: (race) => getWordsByRace(race),
+  getGrammarByRace: (race) => getGrammarByRace(race),
+  getPuzzlesByRace: (race) => getPuzzlesByRace(race),
+  getStelesByRace: (race) => getStelesByRace(race),
+  getUnlockedWordsByRace: (race) => {
+    const state = get();
+    return getWordsByRace(race).filter((w) => state.unlockedLanguageWords[w.id]);
+  },
+  getUnlockedGrammarByRace: (race) => {
+    const state = get();
+    return getGrammarByRace(race).filter((g) => state.unlockedLanguageGrammar[g.id]);
+  },
+  addLanguageExperience: (race, amount) => {
+    const state = get();
+    const newExp = { ...state.languageExperience };
+    newExp[race] = (newExp[race] || 0) + amount;
+    const newLevels = { ...state.languageLevels };
+    let level = newLevels[race];
+    while (newExp[race] >= level * 200 && level < 10) {
+      level++;
+    }
+    newLevels[race] = level;
+    set({
+      languageExperience: newExp,
+      languageLevels: newLevels,
+    });
+  },
+  getLanguageLevel: (race) => get().languageLevels[race] || 1,
+  setCurrentPuzzle: (puzzle) => set({ currentPuzzle: puzzle }),
+  setCurrentStele: (stele) => set({ currentStele: stele }),
+  canTranslateStele: (steleId) => {
+    const state = get();
+    const stele = getSteleById(steleId);
+    if (!stele) return false;
+    const hasAllWords = stele.requiredWords.every((wordId) => state.unlockedLanguageWords[wordId]);
+    const hasAllGrammar = stele.requiredGrammar.every((grammarId) => state.unlockedLanguageGrammar[grammarId]);
+    return hasAllWords && hasAllGrammar;
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),

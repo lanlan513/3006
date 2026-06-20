@@ -9,6 +9,14 @@ import CreatureCard from '@/components/CreatureCard';
 import FloatingDecorations from '@/components/FloatingDecorations';
 import { useStoryStore, getHotStories, getInteractiveStoryByStoryId } from '@/store/storyStore';
 
+function getNightStartHour(currentHour: number): number {
+  const nightStart = 20;
+  if (currentHour < nightStart) {
+    return nightStart - currentHour;
+  }
+  return 24 - currentHour + nightStart;
+}
+
 export default function Home() {
   const allStories = useStoryStore((state) => state.stories);
   const allCharacters = useStoryStore((state) => state.characters);
@@ -16,6 +24,8 @@ export default function Home() {
   const unlockedCreatures = useStoryStore((state) => state.unlockedCreatures);
   const interactiveStories = useStoryStore((state) => state.interactiveStories);
   const storyProgress = useStoryStore((state) => state.storyProgress);
+  const dayNightPhase = useStoryStore((state) => state.dayNightPhase);
+  const gameHour = useStoryStore((state) => state.gameHour);
   const hotStories = useMemo(() => getHotStories(allStories), [allStories]);
   const featuredCharacters = useMemo(
     () => allCharacters.filter((c) => c.isProtagonist).slice(0, 4),
@@ -608,14 +618,40 @@ export default function Home() {
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center relative">
-                <Moon className="w-6 h-6 text-white" />
+                {dayNightPhase === 'night' || dayNightPhase === 'dusk' ? (
+                  <Moon className="w-6 h-6 text-white" />
+                ) : (
+                  <Moon className="w-6 h-6 text-white" />
+                )}
                 <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] rounded-full font-body font-bold shadow-md">
                   NEW
                 </span>
               </div>
               <div>
                 <h2 className="text-2xl md:text-3xl font-fairy text-gray-800">童话梦境层</h2>
-                <p className="text-sm text-gray-500 font-body">夜幕降临，探索角色内心的隐秘世界</p>
+                <p className="text-sm text-gray-500 font-body flex items-center gap-1.5">
+                  {dayNightPhase === 'night' ? (
+                    <>
+                      <span className="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                      夜幕已降临，角色们正在入梦……
+                    </>
+                  ) : dayNightPhase === 'dusk' ? (
+                    <>
+                      <span className="inline-block w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                      黄昏时分，梦境即将开启
+                    </>
+                  ) : dayNightPhase === 'dawn' ? (
+                    <>
+                      <span className="inline-block w-2 h-2 rounded-full bg-amber-400" />
+                      黎明将至，梦境渐渐消散
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-block w-2 h-2 rounded-full bg-amber-300" />
+                      白天 · 夜幕将在 {getNightStartHour(gameHour)} 点后降临
+                    </>
+                  )}
+                </p>
               </div>
             </div>
             <Link
@@ -626,12 +662,20 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 rounded-3xl p-6 md:p-8 border border-violet-400/20 mb-8 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-40 pointer-events-none">
-              {[...Array(30)].map((_, i) => (
+          <div className={`rounded-3xl p-6 md:p-8 border mb-8 relative overflow-hidden transition-all duration-1000 ${
+            dayNightPhase === 'night'
+              ? 'bg-gradient-to-br from-indigo-900/30 via-violet-800/20 to-fuchsia-900/30 border-violet-400/40'
+              : dayNightPhase === 'dusk'
+              ? 'bg-gradient-to-br from-orange-500/20 via-violet-500/15 to-indigo-700/25 border-orange-300/40'
+              : 'bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 border-violet-400/20'
+          }`}>
+            <div className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 ${
+              dayNightPhase === 'night' ? 'opacity-80' : dayNightPhase === 'dusk' ? 'opacity-60' : 'opacity-40'
+            }`}>
+              {[...Array(dayNightPhase === 'night' ? 50 : 30)].map((_, i) => (
                 <Sparkles
                   key={i}
-                  className="absolute text-amber-400 animate-twinkle"
+                  className="absolute text-amber-300 animate-twinkle"
                   style={{
                     left: `${Math.random() * 100}%`,
                     top: `${Math.random() * 100}%`,
@@ -654,17 +698,25 @@ export default function Home() {
                 ))}
               </div>
               <div className="flex-1 text-center md:text-left">
-                <h3 className="font-fairy text-xl md:text-2xl text-gray-800 mb-2">
-                  进入角色的梦境世界
+                <h3 className={`font-fairy text-xl md:text-2xl mb-2 transition-colors duration-1000 ${
+                  dayNightPhase === 'night' ? 'text-white' : 'text-gray-800'
+                }`}>
+                  {dayNightPhase === 'night' ? '🌙 夜幕已降临，进入梦境吧' : '进入角色的梦境世界'}
                 </h3>
-                <p className="text-gray-600 font-body leading-relaxed mb-4">
-                  当夜幕降临，童话角色们都会入梦。扭曲的城堡、镜像的森林、奇异的梦境生灵……
-                  在这里探索每个角色内心隐藏的愿望与深层恐惧，
-                  梦境地图会随着每一次经历悄然变化，拼凑出他们真实的灵魂。
+                <p className={`font-body leading-relaxed mb-4 transition-colors duration-1000 ${
+                  dayNightPhase === 'night' ? 'text-violet-100' : 'text-gray-600'
+                }`}>
+                  {dayNightPhase === 'night'
+                    ? '此刻，所有童话角色都沉入了梦乡。扭曲的城堡、镜像的森林、奇异的梦境生灵在等你探索……'
+                    : '当夜幕降临，童话角色们都会入梦。扭曲的城堡、镜像的森林、奇异的梦境生灵……在这里探索每个角色内心隐藏的愿望与深层恐惧，梦境地图会随着每一次经历悄然变化。'}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                   {['扭曲梦境场景', '12+ 梦境生物', '内心愿望系统', '动态演化地图'].map((tag) => (
-                    <span key={tag} className="fairy-tag text-xs bg-white/50 text-gray-700">
+                    <span key={tag} className={`fairy-tag text-xs ${
+                      dayNightPhase === 'night'
+                        ? 'bg-violet-500/30 text-violet-100 border-violet-400/40'
+                        : 'bg-white/50 text-gray-700'
+                    }`}>
                       {tag}
                     </span>
                   ))}
@@ -672,11 +724,18 @@ export default function Home() {
               </div>
               <Link
                 to="/dream-world"
-                className="fairy-button inline-flex items-center gap-2 whitespace-nowrap"
-                style={{ background: 'linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #D946EF 100%)' }}
+                className={`fairy-button inline-flex items-center gap-2 whitespace-nowrap transition-all duration-500 ${
+                  dayNightPhase === 'night' ? 'scale-105 shadow-xl' : ''
+                }`}
+                style={{
+                  background: dayNightPhase === 'night'
+                    ? 'linear-gradient(135deg, #F59E0B 0%, #EF4444 35%, #8B5CF6 70%, #D946EF 100%)'
+                    : 'linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #D946EF 100%)',
+                }}
               >
-                <Moon className="w-5 h-5" />
-                进入梦境
+                <Moon className={`w-5 h-5 ${dayNightPhase === 'night' ? 'animate-twinkle' : ''}`} />
+                {dayNightPhase === 'night' ? '立即入梦' : '进入梦境'}
+                {dayNightPhase === 'night' && <Sparkles className="w-4 h-4 animate-twinkle" />}
               </Link>
             </div>
           </div>

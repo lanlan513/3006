@@ -40,6 +40,7 @@ import type {
   InnerWish,
   InnerFear,
   DreamTab,
+  DayNightPhase,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
@@ -179,15 +180,15 @@ interface StoryState {
   completeCourse: (courseId: string) => void;
   isLessonUnlocked: (lessonId: string, courseId: string) => boolean;
   dreamCreatures: DreamCreature[];
-  dreamLocations: DreamLocation[];
   characterDreamStates: Record<string, CharacterDreamState>;
   activeDreamCharacterId: string | null;
-  activeDreamLocationId: string | null;
   currentDreamEncounter: DreamEncounter | null;
   selectedDreamTab: DreamTab;
-  wishProgress: Record<string, number>;
-  fearProgress: Record<string, number>;
-  distortionLevel: number;
+  dayNightPhase: DayNightPhase;
+  gameHour: number;
+  dayNightTimer: number;
+  autoDreamEnabled: boolean;
+  lastNightDreamTriggered: boolean;
   setSelectedDreamTab: (tab: DreamTab) => void;
   initDreamForCharacter: (characterId: string) => void;
   enterDream: (characterId: string) => void;
@@ -202,7 +203,11 @@ interface StoryState {
   addDreamMemory: (memory: Omit<DreamMemory, 'id' | 'timestamp'>) => void;
   getCharacterDreamState: (characterId: string) => CharacterDreamState | undefined;
   levelUpDream: (characterId: string) => void;
-  updateDistortion: (amount: number) => void;
+  updateDistortion: (characterId: string, amount: number) => void;
+  advanceDayNight: () => void;
+  setAutoDreamEnabled: (enabled: boolean) => void;
+  getCurrentDreamLocations: () => DreamLocation[];
+  getCurrentDreamState: () => CharacterDreamState | undefined;
 }
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -263,15 +268,15 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   playerEventTitles: [],
   selectedEventTab: 'current',
   dreamCreatures: DREAM_CREATURES,
-  dreamLocations: BASE_DREAM_LOCATIONS,
   characterDreamStates: {},
   activeDreamCharacterId: null,
-  activeDreamLocationId: null,
   currentDreamEncounter: null,
   selectedDreamTab: 'character-select',
-  wishProgress: {},
-  fearProgress: {},
-  distortionLevel: 20,
+  dayNightPhase: 'day',
+  gameHour: 12,
+  dayNightTimer: 0,
+  autoDreamEnabled: false,
+  lastNightDreamTriggered: false,
 
   setSelectedDreamTab: (tab) => set({ selectedDreamTab: tab }),
   initDreamForCharacter: (characterId) => {
@@ -283,19 +288,25 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const fears = generateFearsForCharacter(character);
     const locations = generateLocationsForCharacter(character);
     const discovered = locations.filter((l) => l.discovered).map((l) => l.id);
-    const newWishProgress: Record<string, number> = {};
-    const newFearProgress: Record<string, number> = {};
-    wishes.forEach((w) => { newWishProgress[w.id] = 0; });
-    fears.forEach((f) => { newFearProgress[f.id] = 0; });
+    const wishProgress: Record<string, number> = {};
+    const fearProgress: Record<string, number> = {};
+    wishes.forEach((w) => { wishProgress[w.id] = 0; });
+    fears.forEach((f) => { fearProgress[f.id] = 0; });
+    const startLocation = discovered[0] || locations[0]?.id || 'dl1';
     const dreamState: CharacterDreamState = {
       characterId,
       dreamLevel: 1,
       lucidity: 50,
       dreamStability: 70,
+      distortionLevel: 20,
+      dreamLocations: locations,
       discoveredLocationIds: discovered,
+      currentLocationId: startLocation,
       encounteredCreatureIds: [],
       innerWishes: wishes,
       innerFears: fears,
+      wishProgress,
+      fearProgress,
       dreamMemories: [],
       unlockedDreamLayers: 1,
       totalDreamTime: 0,
@@ -303,9 +314,6 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     };
     set({
       characterDreamStates: { ...state.characterDreamStates, [characterId]: dreamState },
-      dreamLocations: locations,
-      wishProgress: { ...state.wishProgress, ...newWishProgress },
-      fearProgress: { ...state.fearProgress, ...newFearProgress },
     });
   },
   enterDream: (characterId) => {
@@ -316,10 +324,8 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const dreamState = get().characterDreamStates[characterId];
     if (!dreamState) return;
     const updated = { ...dreamState, lastDreamEntry: Date.now() };
-    const startLocation = dreamState.discoveredLocationIds[0] || 'dl1';
     set({
       activeDreamCharacterId: characterId,
-      activeDreamLocationId: startLocation,
       currentDreamEncounter: null,
       selectedDreamTab: 'overview',
       characterDreamStates: { ...get().characterDreamStates, [characterId]: updated },
@@ -342,7 +348,6 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     }
     set({
       activeDreamCharacterId: null,
-      activeDreamLocationId: null,
       currentDreamEncounter: null,
     });
   },
@@ -352,14 +357,21 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     if (!characterId) return;
     const dreamState = state.characterDreamStates[characterId];
     if (!dreamState) return;
-    const location = state.dreamLocations.find((l) => l.id === locationId);
+    const location = dreamState.dreamLocations.find((l) => l.id === locationId);
     if (!location) return;
     const discovered = new Set(dreamState.discoveredLocationIds);
+    let updatedLocations = dreamState.dreamLocations;
+    let updatedDs: CharacterDreamState = { ...dreamState, currentLocationId: locationId };
     if (!discovered.has(locationId)) {
       discovered.add(locationId);
-      const updatedLocations = state.dreamLocations.map((l) =>
+      updatedLocations = dreamState.dreamLocations.map((l) =>
         l.id === locationId ? { ...l, discovered: true } : l
       );
+      updatedDs = {
+        ...updatedDs,
+        dreamLocations: updatedLocations,
+        discoveredLocationIds: Array.from(discovered),
+      };
       const memoryData: Omit<DreamMemory, 'id' | 'timestamp'> = {
         characterId,
         locationId,
@@ -369,54 +381,47 @@ export const useStoryStore = create<StoryState>((set, get) => ({
         impactOnDream: 10,
       };
       set({
-        dreamLocations: updatedLocations,
-        activeDreamLocationId: locationId,
+        characterDreamStates: { ...state.characterDreamStates, [characterId]: updatedDs },
       });
       get().addDreamMemory(memoryData);
-      const currentState = get();
-      const updatedDs = {
-        ...currentState.characterDreamStates[characterId],
-        discoveredLocationIds: Array.from(discovered),
-      };
-      set({
-        characterDreamStates: { ...currentState.characterDreamStates, [characterId]: updatedDs },
-      });
       const trigger = DREAM_EVOLUTION_TRIGGERS.find((t) => t.type === 'location_discovered');
       if (trigger && discovered.size >= trigger.threshold) {
         if (trigger.distortionShift) {
-          get().updateDistortion(trigger.distortionShift);
+          get().updateDistortion(characterId, trigger.distortionShift);
         }
       }
     } else {
-      set({ activeDreamLocationId: locationId });
+      set({
+        characterDreamStates: { ...state.characterDreamStates, [characterId]: updatedDs },
+      });
     }
   },
   triggerDreamEncounter: () => {
     const state = get();
     const characterId = state.activeDreamCharacterId;
-    const locationId = state.activeDreamLocationId;
-    if (!characterId || !locationId) return;
-    const dreamState = state.characterDreamStates[characterId];
-    if (!dreamState) return;
-    const encounter = generateDreamEncounter(characterId, locationId, dreamState.dreamLevel);
+    const dreamState = state.characterDreamStates[characterId || ''];
+    if (!characterId || !dreamState || !dreamState.currentLocationId) return;
+    const encounter = generateDreamEncounter(characterId, dreamState.currentLocationId, dreamState.dreamLevel);
     set({ currentDreamEncounter: encounter });
   },
   resolveDreamEncounter: (optionId) => {
     const state = get();
     const characterId = state.activeDreamCharacterId;
-    const locationId = state.activeDreamLocationId;
     const encounter = state.currentDreamEncounter;
-    if (!characterId || !locationId || !encounter) return;
+    if (!characterId || !encounter) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState || !dreamState.currentLocationId) return;
+    const locationId = dreamState.currentLocationId;
     const option = encounter.options.find((o) => o.id === optionId);
     if (!option) return;
-    const dreamState = state.characterDreamStates[characterId];
-    if (!dreamState) return;
     let newLucidity = Math.max(0, Math.min(100, dreamState.lucidity + option.lucidityChange));
     let newStability = Math.max(0, Math.min(100, dreamState.dreamStability + option.stabilityChange));
     const updatedWishes = [...dreamState.innerWishes];
     const updatedFears = [...dreamState.innerFears];
-    const newWishProgress = { ...state.wishProgress };
-    const newFearProgress = { ...state.fearProgress };
+    const newWishProgress = { ...dreamState.wishProgress };
+    const newFearProgress = { ...dreamState.fearProgress };
+    let updatedLocations = [...dreamState.dreamLocations];
+    let newDiscovered = [...dreamState.discoveredLocationIds];
     const memoriesToAdd: Omit<DreamMemory, 'id' | 'timestamp'>[] = [];
     if (option.wishProgress) {
       updatedWishes.forEach((wish, idx) => {
@@ -455,8 +460,12 @@ export const useStoryStore = create<StoryState>((set, get) => ({
       });
     }
     if (option.unlocksLocationId) {
-      const loc = state.dreamLocations.find((l) => l.id === option.unlocksLocationId);
-      if (loc) {
+      const loc = dreamState.dreamLocations.find((l) => l.id === option.unlocksLocationId);
+      if (loc && !newDiscovered.includes(option.unlocksLocationId)) {
+        newDiscovered.push(option.unlocksLocationId);
+        updatedLocations = updatedLocations.map((l) =>
+          l.id === option.unlocksLocationId ? { ...l, discovered: true } : l
+        );
         memoriesToAdd.push({
           characterId,
           locationId: option.unlocksLocationId,
@@ -465,9 +474,6 @@ export const useStoryStore = create<StoryState>((set, get) => ({
           description: loc.description,
           impactOnDream: 15,
         });
-        setTimeout(() => {
-          get().discoverDreamLocation(option.unlocksLocationId!);
-        }, 0);
       }
     }
     if (option.outcome === 'revelation') {
@@ -490,7 +496,6 @@ export const useStoryStore = create<StoryState>((set, get) => ({
       });
     }
     let newLevel = dreamState.dreamLevel;
-    const totalImpact = memoriesToAdd.reduce((sum, m) => sum + m.impactOnDream, 0);
     const currentMemories = dreamState.dreamMemories.length + memoriesToAdd.length;
     if (currentMemories >= newLevel * 5 && newLevel < 10) {
       newLevel = newLevel + 1;
@@ -499,25 +504,29 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     if (encounter.creatureId) {
       newEncountered.add(encounter.creatureId);
     }
+    const newDistortion = Math.max(0, Math.min(100, dreamState.distortionLevel + (option.outcome === 'negative' ? 8 : option.outcome === 'positive' ? -3 : 2)));
     const updated: CharacterDreamState = {
       ...dreamState,
       lucidity: newLucidity,
       dreamStability: newStability,
+      distortionLevel: newDistortion,
       dreamLevel: newLevel,
       innerWishes: updatedWishes,
       innerFears: updatedFears,
+      wishProgress: newWishProgress,
+      fearProgress: newFearProgress,
+      dreamLocations: updatedLocations,
+      discoveredLocationIds: newDiscovered,
       encounteredCreatureIds: Array.from(newEncountered),
     };
     set({
       characterDreamStates: { ...state.characterDreamStates, [characterId]: updated },
-      wishProgress: newWishProgress,
-      fearProgress: newFearProgress,
     });
     memoriesToAdd.forEach((m) => get().addDreamMemory(m));
     if (newLevel > dreamState.dreamLevel) {
       const trigger = DREAM_EVOLUTION_TRIGGERS.find((t) => t.type === 'dream_level_up');
       if (trigger && trigger.distortionShift) {
-        get().updateDistortion(trigger.distortionShift);
+        get().updateDistortion(characterId, trigger.distortionShift);
       }
     }
   },
@@ -531,11 +540,12 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const updatedWishes = dreamState.innerWishes.map((w) =>
       w.id === wishId ? { ...w, granted: true } : w
     );
+    const newWishProgress = { ...dreamState.wishProgress, [wishId]: 100 };
     const wish = dreamState.innerWishes.find((w) => w.id === wishId);
     if (wish) {
       get().addDreamMemory({
         characterId,
-        locationId: state.activeDreamLocationId || 'dl1',
+        locationId: dreamState.currentLocationId || 'dl1',
         type: 'wish_granted',
         title: `愿望实现：${wish.title}`,
         description: wish.description,
@@ -545,7 +555,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     set({
       characterDreamStates: {
         ...state.characterDreamStates,
-        [characterId]: { ...dreamState, innerWishes: updatedWishes },
+        [characterId]: { ...dreamState, innerWishes: updatedWishes, wishProgress: newWishProgress },
       },
     });
   },
@@ -558,11 +568,12 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const updatedFears = dreamState.innerFears.map((f) =>
       f.id === fearId ? { ...f, confronted: true } : f
     );
+    const newFearProgress = { ...dreamState.fearProgress, [fearId]: 100 };
     const fear = dreamState.innerFears.find((f) => f.id === fearId);
     if (fear) {
       get().addDreamMemory({
         characterId,
-        locationId: state.activeDreamLocationId || 'dl1',
+        locationId: dreamState.currentLocationId || 'dl1',
         type: 'confrontation',
         title: `直面恐惧：${fear.title}`,
         description: fear.description,
@@ -572,7 +583,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     set({
       characterDreamStates: {
         ...state.characterDreamStates,
-        [characterId]: { ...dreamState, innerFears: updatedFears },
+        [characterId]: { ...dreamState, innerFears: updatedFears, fearProgress: newFearProgress },
       },
     });
   },
@@ -583,15 +594,15 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     const dreamState = state.characterDreamStates[characterId];
     if (!dreamState) return;
     if (dreamState.discoveredLocationIds.includes(locationId)) return;
-    const updatedLocations = state.dreamLocations.map((l) =>
+    const updatedLocations = dreamState.dreamLocations.map((l) =>
       l.id === locationId ? { ...l, discovered: true } : l
     );
     set({
-      dreamLocations: updatedLocations,
       characterDreamStates: {
         ...state.characterDreamStates,
         [characterId]: {
           ...dreamState,
+          dreamLocations: updatedLocations,
           discoveredLocationIds: [...dreamState.discoveredLocationIds, locationId],
         },
       },
@@ -629,6 +640,16 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   getCharacterDreamState: (characterId) => {
     return get().characterDreamStates[characterId];
   },
+  getCurrentDreamState: () => {
+    const state = get();
+    if (!state.activeDreamCharacterId) return undefined;
+    return state.characterDreamStates[state.activeDreamCharacterId];
+  },
+  getCurrentDreamLocations: () => {
+    const state = get();
+    if (!state.activeDreamCharacterId) return [];
+    return state.characterDreamStates[state.activeDreamCharacterId]?.dreamLocations || [];
+  },
   levelUpDream: (characterId) => {
     const state = get();
     const dreamState = state.characterDreamStates[characterId];
@@ -641,11 +662,43 @@ export const useStoryStore = create<StoryState>((set, get) => ({
       },
     });
   },
-  updateDistortion: (amount) => {
+  updateDistortion: (characterId, amount) => {
     const state = get();
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    const newDistortion = Math.max(0, Math.min(100, dreamState.distortionLevel + amount));
     set({
-      distortionLevel: Math.max(0, Math.min(100, state.distortionLevel + amount)),
+      characterDreamStates: {
+        ...state.characterDreamStates,
+        [characterId]: { ...dreamState, distortionLevel: newDistortion },
+      },
     });
+  },
+  setAutoDreamEnabled: (enabled) => set({ autoDreamEnabled: enabled }),
+  advanceDayNight: () => {
+    const state = get();
+    let newHour = state.gameHour + 1;
+    let newPhase: DayNightPhase = state.dayNightPhase;
+    let triggered = state.lastNightDreamTriggered;
+    if (newHour >= 24) newHour = 0;
+    if (newHour >= 6 && newHour < 8) {
+      newPhase = 'dawn';
+    } else if (newHour >= 8 && newHour < 17) {
+      newPhase = 'day';
+      triggered = false;
+    } else if (newHour >= 17 && newHour < 20) {
+      newPhase = 'dusk';
+    } else {
+      newPhase = 'night';
+    }
+    set({
+      gameHour: newHour,
+      dayNightPhase: newPhase,
+      lastNightDreamTriggered: triggered,
+    });
+    if (newPhase === 'night' && !triggered) {
+      set({ lastNightDreamTriggered: true });
+    }
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),

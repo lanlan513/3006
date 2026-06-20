@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe, Wand2, ScrollText, Film, GraduationCap, Zap, Moon } from 'lucide-react';
+import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe, Wand2, ScrollText, Film, GraduationCap, Zap, Moon, Sun, CloudSun } from 'lucide-react';
 import { useStoryStore } from '@/store/storyStore';
 
 export default function Navbar() {
@@ -128,6 +128,10 @@ export default function Navbar() {
               <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-violet-500 animate-twinkle" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
             </Link>
+
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-violet-50 border border-fairy-purple/20">
+              <DayNightIndicator />
+            </div>
 
             <form onSubmit={handleSearch} className="relative">
               <input
@@ -269,5 +273,36 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+  );
+}
+
+function DayNightIndicator() {
+  const dayNightPhase = useStoryStore((state) => state.dayNightPhase);
+  const gameHour = useStoryStore((state) => state.gameHour);
+
+  const phaseInfo = {
+    dawn: { icon: CloudSun, label: '黎明', color: 'text-amber-500', bg: 'bg-amber-100' },
+    day: { icon: Sun, label: '白天', color: 'text-amber-500', bg: 'bg-amber-100' },
+    dusk: { icon: CloudSun, label: '黄昏', color: 'text-orange-500', bg: 'bg-orange-100' },
+    night: { icon: Moon, label: '夜晚', color: 'text-indigo-500', bg: 'bg-indigo-100' },
+  };
+
+  const info = phaseInfo[dayNightPhase];
+  const Icon = info.icon;
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`w-7 h-7 rounded-lg ${info.bg} flex items-center justify-center`}>
+        <Icon className={`w-4 h-4 ${info.color}`} />
+      </div>
+      <div className="flex flex-col">
+        <span className={`text-[11px] font-bold ${info.color} leading-tight`}>
+          {info.label}
+        </span>
+        <span className="text-[10px] text-gray-500 font-body leading-tight">
+          {String(gameHour).padStart(2, '0')}:00
+        </span>
+      </div>
+    </div>
   );
 }

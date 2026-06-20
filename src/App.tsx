@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import Home from '@/pages/Home';
 import StoryList from '@/pages/StoryList';
 import StoryDetail from '@/pages/StoryDetail';
@@ -12,8 +13,20 @@ import FairyAcademy from '@/pages/FairyAcademy';
 import CourseDetail from '@/pages/CourseDetail';
 import CosmicEvents from '@/pages/CosmicEvents';
 import DreamWorld from '@/pages/DreamWorld';
+import { useStoryStore } from '@/store/storyStore';
+
+const DAY_NIGHT_INTERVAL_MS = 60000;
 
 export default function App() {
+  const advanceDayNight = useStoryStore((state) => state.advanceDayNight);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      advanceDayNight();
+    }, DAY_NIGHT_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [advanceDayNight]);
+
   return (
     <Router>
       <Routes>

@@ -875,10 +875,15 @@ export interface CharacterDreamState {
   dreamLevel: number;
   lucidity: number;
   dreamStability: number;
+  distortionLevel: number;
+  dreamLocations: DreamLocation[];
   discoveredLocationIds: string[];
+  currentLocationId: string | null;
   encounteredCreatureIds: string[];
   innerWishes: InnerWish[];
   innerFears: InnerFear[];
+  wishProgress: Record<string, number>;
+  fearProgress: Record<string, number>;
   dreamMemories: DreamMemory[];
   unlockedDreamLayers: number;
   totalDreamTime: number;
@@ -928,5 +933,7 @@ export interface DreamEvolutionTrigger {
   distortionShift?: number;
   description: string;
 }
+
+export type DayNightPhase = 'dawn' | 'day' | 'dusk' | 'night';
 
 export type DreamTab = 'overview' | 'map' | 'wishes' | 'fears' | 'memories' | 'character-select';

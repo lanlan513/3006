@@ -94,21 +94,16 @@ export default function DreamWorld() {
   const navigate = useNavigate();
   const allCharacters = useStoryStore((state) => state.characters);
   const activeDreamCharacterId = useStoryStore((state) => state.activeDreamCharacterId);
-  const activeDreamLocationId = useStoryStore((state) => state.activeDreamLocationId);
   const selectedDreamTab = useStoryStore((state) => state.selectedDreamTab);
   const setSelectedDreamTab = useStoryStore((state) => state.setSelectedDreamTab);
   const characterDreamStates = useStoryStore((state) => state.characterDreamStates);
-  const dreamLocations = useStoryStore((state) => state.dreamLocations);
   const currentDreamEncounter = useStoryStore((state) => state.currentDreamEncounter);
-  const distortionLevel = useStoryStore((state) => state.distortionLevel);
   const enterDream = useStoryStore((state) => state.enterDream);
   const exitDream = useStoryStore((state) => state.exitDream);
   const travelToDreamLocation = useStoryStore((state) => state.travelToDreamLocation);
   const triggerDreamEncounter = useStoryStore((state) => state.triggerDreamEncounter);
   const resolveDreamEncounter = useStoryStore((state) => state.resolveDreamEncounter);
   const closeDreamEncounter = useStoryStore((state) => state.closeDreamEncounter);
-  const wishProgress = useStoryStore((state) => state.wishProgress);
-  const fearProgress = useStoryStore((state) => state.fearProgress);
 
   const protagonistCharacters = useMemo(
     () => allCharacters.filter((c) => c.isProtagonist),
@@ -126,8 +121,25 @@ export default function DreamWorld() {
   }, [characterDreamStates, activeDreamCharacterId]);
 
   const currentLocation = useMemo(() => {
-    return dreamLocations.find((l) => l.id === activeDreamLocationId);
-  }, [dreamLocations, activeDreamLocationId]);
+    if (!currentDreamState || !currentDreamState.currentLocationId) return undefined;
+    return currentDreamState.dreamLocations.find((l) => l.id === currentDreamState.currentLocationId);
+  }, [currentDreamState]);
+
+  const dreamLocations = useMemo(() => {
+    return currentDreamState?.dreamLocations || [];
+  }, [currentDreamState]);
+
+  const distortionLevel = useMemo(() => {
+    return currentDreamState?.distortionLevel || 20;
+  }, [currentDreamState]);
+
+  const wishProgress = useMemo(() => {
+    return currentDreamState?.wishProgress || {};
+  }, [currentDreamState]);
+
+  const fearProgress = useMemo(() => {
+    return currentDreamState?.fearProgress || {};
+  }, [currentDreamState]);
 
   const characterTheme = useMemo(() => {
     if (!currentCharacter) return { color: '#9F7AEA', icon: '💫', description: '神秘梦境' };
@@ -312,7 +324,7 @@ export default function DreamWorld() {
               {selectedDreamTab === 'map' && currentDreamState && (
                 <DreamMapPanel
                   locations={dreamLocations}
-                  currentLocationId={activeDreamLocationId}
+                  currentLocationId={currentDreamState.currentLocationId}
                   discoveredIds={currentDreamState.discoveredLocationIds}
                   onTravel={travelToDreamLocation}
                 />

@@ -10,6 +10,7 @@ import {
   Star,
   Eye,
   Smile,
+  Moon,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import CharacterCard from '@/components/CharacterCard';
@@ -22,6 +23,7 @@ export default function CharacterDetail() {
   const navigate = useNavigate();
   const allCharacters = useStoryStore((state) => state.characters);
   const allStories = useStoryStore((state) => state.stories);
+  const enterDream = useStoryStore((state) => state.enterDream);
 
   const character = useMemo(() => getCharacterById(allCharacters, id || ''), [allCharacters, id]);
   const story = useMemo(
@@ -169,6 +171,33 @@ export default function CharacterDetail() {
                           {trait}
                         </span>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-fairy-purple/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center">
+                        <Moon className="w-4 h-4 text-white" />
+                      </div>
+                      <h3 className="font-fairy text-xl text-gray-800">夜晚降临</h3>
+                    </div>
+                    <div className="ml-10 flex flex-wrap gap-3">
+                      <button
+                        onClick={() => {
+                          enterDream(character.id);
+                          navigate('/dream-world');
+                        }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-body transition-all duration-300 hover:scale-105 shadow-md"
+                        style={{
+                          background: 'linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #D946EF 100%)',
+                        }}
+                      >
+                        <Moon className="w-4 h-4" />
+                        进入 {character.name} 的梦境
+                      </button>
+                      <p className="text-xs text-gray-500 font-body flex items-center">
+                        探索 {character.name} 内心隐藏的愿望与恐惧
+                      </p>
                     </div>
                   </div>
                 </div>

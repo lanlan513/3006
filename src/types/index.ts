@@ -791,3 +791,142 @@ export interface EventHistoryRecord {
 }
 
 export type CosmicEventTab = 'current' | 'history' | 'leaderboard' | 'worldState';
+
+export type DreamSceneType = '扭曲城堡' | '镜像森林' | '梦境海洋' | '星空草原' | '遗忘迷宫' | '心灵花园' | '恐惧深渊' | '愿望之巅';
+
+export const DREAM_SCENE_TYPES: DreamSceneType[] = [
+  '扭曲城堡',
+  '镜像森林',
+  '梦境海洋',
+  '星空草原',
+  '遗忘迷宫',
+  '心灵花园',
+  '恐惧深渊',
+  '愿望之巅',
+];
+
+export type DreamMood = '甜蜜' | '奇幻' | '忧郁' | '诡异' | '壮丽' | '迷幻';
+
+export interface DreamCreature {
+  id: string;
+  name: string;
+  originalCreatureId?: string;
+  emoji: string;
+  twistedEmoji: string;
+  coverColor: string;
+  description: string;
+  twistedDescription: string;
+  isNightmare: boolean;
+  abilities: string[];
+  symbolism: string;
+}
+
+export interface DreamLocation {
+  id: string;
+  name: string;
+  type: DreamSceneType;
+  originalRegion?: Region;
+  description: string;
+  twistedDescription: string;
+  color: string;
+  glowColor: string;
+  x: number;
+  y: number;
+  discovered: boolean;
+  connectedLocationIds: string[];
+  symbolism: string;
+}
+
+export interface InnerWish {
+  id: string;
+  title: string;
+  description: string;
+  depth: '表面' | '深层' | '潜意识';
+  relatedTraits: string[];
+  granted: boolean;
+  unlockCondition: string;
+  symbolism: string;
+}
+
+export interface InnerFear {
+  id: string;
+  title: string;
+  description: string;
+  intensity: '轻微' | '中等' | '强烈' | '极致';
+  relatedTraits: string[];
+  confronted: boolean;
+  confrontationHint: string;
+  symbolism: string;
+}
+
+export interface DreamMemory {
+  id: string;
+  characterId: string;
+  timestamp: number;
+  locationId: string;
+  type: 'encounter' | 'revelation' | 'confrontation' | 'wish_granted' | 'discovery';
+  title: string;
+  description: string;
+  impactOnDream: number;
+}
+
+export interface CharacterDreamState {
+  characterId: string;
+  dreamLevel: number;
+  lucidity: number;
+  dreamStability: number;
+  discoveredLocationIds: string[];
+  encounteredCreatureIds: string[];
+  innerWishes: InnerWish[];
+  innerFears: InnerFear[];
+  dreamMemories: DreamMemory[];
+  unlockedDreamLayers: number;
+  totalDreamTime: number;
+  lastDreamEntry?: number;
+}
+
+export interface DreamMapNode {
+  id: string;
+  locationId: string;
+  x: number;
+  y: number;
+  connections: string[];
+  distortionLevel: number;
+  mood: DreamMood;
+}
+
+export interface DreamEncounterOption {
+  id: string;
+  text: string;
+  outcome: 'positive' | 'negative' | 'neutral' | 'revelation';
+  impactDescription: string;
+  lucidityChange: number;
+  stabilityChange: number;
+  wishProgress?: number;
+  fearProgress?: number;
+  grantsWishId?: string;
+  confrontsFearId?: string;
+  unlocksLocationId?: string;
+}
+
+export interface DreamEncounter {
+  id: string;
+  locationId: string;
+  characterId: string;
+  type: 'creature' | 'memory' | 'symbol' | 'wish' | 'fear';
+  title: string;
+  narrative: string;
+  creatureId?: string;
+  visualEmoji: string;
+  options: DreamEncounterOption[];
+}
+
+export interface DreamEvolutionTrigger {
+  type: 'wish_granted' | 'fear_confronted' | 'location_discovered' | 'memory_created' | 'dream_level_up';
+  threshold: number;
+  newLocationTypes?: DreamSceneType[];
+  distortionShift?: number;
+  description: string;
+}
+
+export type DreamTab = 'overview' | 'map' | 'wishes' | 'fears' | 'memories' | 'character-select';

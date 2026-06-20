@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift, ScrollText, Trophy, Film, Zap } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift, ScrollText, Trophy, Film, Zap, Moon } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SearchBar from '@/components/SearchBar';
 import StoryCard from '@/components/StoryCard';
@@ -599,6 +599,84 @@ export default function Home() {
               >
                 <Zap className="w-5 h-5" />
                 进入事件中心
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center relative">
+                <Moon className="w-6 h-6 text-white" />
+                <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] rounded-full font-body font-bold shadow-md">
+                  NEW
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-fairy text-gray-800">童话梦境层</h2>
+                <p className="text-sm text-gray-500 font-body">夜幕降临，探索角色内心的隐秘世界</p>
+              </div>
+            </div>
+            <Link
+              to="/dream-world"
+              className="hidden md:inline-flex items-center gap-1 text-violet-600 font-body hover:gap-2 transition-all"
+            >
+              进入梦境 <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 rounded-3xl p-6 md:p-8 border border-violet-400/20 mb-8 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-40 pointer-events-none">
+              {[...Array(30)].map((_, i) => (
+                <Sparkles
+                  key={i}
+                  className="absolute text-amber-400 animate-twinkle"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    width: `${6 + Math.random() * 10}px`,
+                    animationDelay: `${Math.random() * 4}s`,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+              <div className="flex gap-3">
+                {['🏰', '🌲', '🐺', '🦋', '🌙'].map((emoji, i) => (
+                  <div
+                    key={i}
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-100 to-indigo-100 shadow-md animate-float"
+                    style={{ animationDelay: `${i * 0.3}s` }}
+                  >
+                    <span className="text-3xl md:text-4xl">{emoji}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="font-fairy text-xl md:text-2xl text-gray-800 mb-2">
+                  进入角色的梦境世界
+                </h3>
+                <p className="text-gray-600 font-body leading-relaxed mb-4">
+                  当夜幕降临，童话角色们都会入梦。扭曲的城堡、镜像的森林、奇异的梦境生灵……
+                  在这里探索每个角色内心隐藏的愿望与深层恐惧，
+                  梦境地图会随着每一次经历悄然变化，拼凑出他们真实的灵魂。
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  {['扭曲梦境场景', '12+ 梦境生物', '内心愿望系统', '动态演化地图'].map((tag) => (
+                    <span key={tag} className="fairy-tag text-xs bg-white/50 text-gray-700">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <Link
+                to="/dream-world"
+                className="fairy-button inline-flex items-center gap-2 whitespace-nowrap"
+                style={{ background: 'linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #D946EF 100%)' }}
+              >
+                <Moon className="w-5 h-5" />
+                进入梦境
               </Link>
             </div>
           </div>

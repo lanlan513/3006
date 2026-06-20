@@ -31,6 +31,15 @@ import type {
   EventLeaderboardEntry,
   EventHistoryRecord,
   CosmicEventTab,
+  CharacterDreamState,
+  DreamLocation,
+  DreamCreature,
+  DreamEncounter,
+  DreamEncounterOption,
+  DreamMemory,
+  InnerWish,
+  InnerFear,
+  DreamTab,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
@@ -46,6 +55,17 @@ import {
   getEraNameByLevel,
   getCosmicEventById,
 } from '@/data/cosmicEvents';
+import {
+  DREAM_CREATURES,
+  BASE_DREAM_LOCATIONS,
+  generateWishesForCharacter,
+  generateFearsForCharacter,
+  generateLocationsForCharacter,
+  generateDreamEncounter,
+  getDreamCreatureById,
+  getDreamLocationById,
+  DREAM_EVOLUTION_TRIGGERS,
+} from '@/data/dreamWorld';
 
 interface StoryState {
   stories: Story[];
@@ -158,6 +178,31 @@ interface StoryState {
   getQuizScore: (quizId: string) => number;
   completeCourse: (courseId: string) => void;
   isLessonUnlocked: (lessonId: string, courseId: string) => boolean;
+  dreamCreatures: DreamCreature[];
+  dreamLocations: DreamLocation[];
+  characterDreamStates: Record<string, CharacterDreamState>;
+  activeDreamCharacterId: string | null;
+  activeDreamLocationId: string | null;
+  currentDreamEncounter: DreamEncounter | null;
+  selectedDreamTab: DreamTab;
+  wishProgress: Record<string, number>;
+  fearProgress: Record<string, number>;
+  distortionLevel: number;
+  setSelectedDreamTab: (tab: DreamTab) => void;
+  initDreamForCharacter: (characterId: string) => void;
+  enterDream: (characterId: string) => void;
+  exitDream: () => void;
+  travelToDreamLocation: (locationId: string) => void;
+  triggerDreamEncounter: () => void;
+  resolveDreamEncounter: (optionId: string) => void;
+  closeDreamEncounter: () => void;
+  grantWish: (wishId: string) => void;
+  confrontFear: (fearId: string) => void;
+  discoverDreamLocation: (locationId: string) => void;
+  addDreamMemory: (memory: Omit<DreamMemory, 'id' | 'timestamp'>) => void;
+  getCharacterDreamState: (characterId: string) => CharacterDreamState | undefined;
+  levelUpDream: (characterId: string) => void;
+  updateDistortion: (amount: number) => void;
 }
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -217,6 +262,391 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   playerEventsCompleted: 0,
   playerEventTitles: [],
   selectedEventTab: 'current',
+  dreamCreatures: DREAM_CREATURES,
+  dreamLocations: BASE_DREAM_LOCATIONS,
+  characterDreamStates: {},
+  activeDreamCharacterId: null,
+  activeDreamLocationId: null,
+  currentDreamEncounter: null,
+  selectedDreamTab: 'character-select',
+  wishProgress: {},
+  fearProgress: {},
+  distortionLevel: 20,
+
+  setSelectedDreamTab: (tab) => set({ selectedDreamTab: tab }),
+  initDreamForCharacter: (characterId) => {
+    const state = get();
+    if (state.characterDreamStates[characterId]) return;
+    const character = characters.find((c) => c.id === characterId);
+    if (!character) return;
+    const wishes = generateWishesForCharacter(character);
+    const fears = generateFearsForCharacter(character);
+    const locations = generateLocationsForCharacter(character);
+    const discovered = locations.filter((l) => l.discovered).map((l) => l.id);
+    const newWishProgress: Record<string, number> = {};
+    const newFearProgress: Record<string, number> = {};
+    wishes.forEach((w) => { newWishProgress[w.id] = 0; });
+    fears.forEach((f) => { newFearProgress[f.id] = 0; });
+    const dreamState: CharacterDreamState = {
+      characterId,
+      dreamLevel: 1,
+      lucidity: 50,
+      dreamStability: 70,
+      discoveredLocationIds: discovered,
+      encounteredCreatureIds: [],
+      innerWishes: wishes,
+      innerFears: fears,
+      dreamMemories: [],
+      unlockedDreamLayers: 1,
+      totalDreamTime: 0,
+      lastDreamEntry: undefined,
+    };
+    set({
+      characterDreamStates: { ...state.characterDreamStates, [characterId]: dreamState },
+      dreamLocations: locations,
+      wishProgress: { ...state.wishProgress, ...newWishProgress },
+      fearProgress: { ...state.fearProgress, ...newFearProgress },
+    });
+  },
+  enterDream: (characterId) => {
+    const state = get();
+    if (!state.characterDreamStates[characterId]) {
+      state.initDreamForCharacter(characterId);
+    }
+    const dreamState = get().characterDreamStates[characterId];
+    if (!dreamState) return;
+    const updated = { ...dreamState, lastDreamEntry: Date.now() };
+    const startLocation = dreamState.discoveredLocationIds[0] || 'dl1';
+    set({
+      activeDreamCharacterId: characterId,
+      activeDreamLocationId: startLocation,
+      currentDreamEncounter: null,
+      selectedDreamTab: 'overview',
+      characterDreamStates: { ...get().characterDreamStates, [characterId]: updated },
+    });
+  },
+  exitDream: () => {
+    const state = get();
+    const characterId = state.activeDreamCharacterId;
+    if (!characterId) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (dreamState && dreamState.lastDreamEntry) {
+      const elapsed = Math.floor((Date.now() - dreamState.lastDreamEntry) / 1000);
+      const updated = {
+        ...dreamState,
+        totalDreamTime: dreamState.totalDreamTime + elapsed,
+      };
+      set({
+        characterDreamStates: { ...state.characterDreamStates, [characterId]: updated },
+      });
+    }
+    set({
+      activeDreamCharacterId: null,
+      activeDreamLocationId: null,
+      currentDreamEncounter: null,
+    });
+  },
+  travelToDreamLocation: (locationId) => {
+    const state = get();
+    const characterId = state.activeDreamCharacterId;
+    if (!characterId) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    const location = state.dreamLocations.find((l) => l.id === locationId);
+    if (!location) return;
+    const discovered = new Set(dreamState.discoveredLocationIds);
+    if (!discovered.has(locationId)) {
+      discovered.add(locationId);
+      const updatedLocations = state.dreamLocations.map((l) =>
+        l.id === locationId ? { ...l, discovered: true } : l
+      );
+      const memoryData: Omit<DreamMemory, 'id' | 'timestamp'> = {
+        characterId,
+        locationId,
+        type: 'discovery',
+        title: `发现了${location.name}`,
+        description: location.twistedDescription,
+        impactOnDream: 10,
+      };
+      set({
+        dreamLocations: updatedLocations,
+        activeDreamLocationId: locationId,
+      });
+      get().addDreamMemory(memoryData);
+      const currentState = get();
+      const updatedDs = {
+        ...currentState.characterDreamStates[characterId],
+        discoveredLocationIds: Array.from(discovered),
+      };
+      set({
+        characterDreamStates: { ...currentState.characterDreamStates, [characterId]: updatedDs },
+      });
+      const trigger = DREAM_EVOLUTION_TRIGGERS.find((t) => t.type === 'location_discovered');
+      if (trigger && discovered.size >= trigger.threshold) {
+        if (trigger.distortionShift) {
+          get().updateDistortion(trigger.distortionShift);
+        }
+      }
+    } else {
+      set({ activeDreamLocationId: locationId });
+    }
+  },
+  triggerDreamEncounter: () => {
+    const state = get();
+    const characterId = state.activeDreamCharacterId;
+    const locationId = state.activeDreamLocationId;
+    if (!characterId || !locationId) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    const encounter = generateDreamEncounter(characterId, locationId, dreamState.dreamLevel);
+    set({ currentDreamEncounter: encounter });
+  },
+  resolveDreamEncounter: (optionId) => {
+    const state = get();
+    const characterId = state.activeDreamCharacterId;
+    const locationId = state.activeDreamLocationId;
+    const encounter = state.currentDreamEncounter;
+    if (!characterId || !locationId || !encounter) return;
+    const option = encounter.options.find((o) => o.id === optionId);
+    if (!option) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    let newLucidity = Math.max(0, Math.min(100, dreamState.lucidity + option.lucidityChange));
+    let newStability = Math.max(0, Math.min(100, dreamState.dreamStability + option.stabilityChange));
+    const updatedWishes = [...dreamState.innerWishes];
+    const updatedFears = [...dreamState.innerFears];
+    const newWishProgress = { ...state.wishProgress };
+    const newFearProgress = { ...state.fearProgress };
+    const memoriesToAdd: Omit<DreamMemory, 'id' | 'timestamp'>[] = [];
+    if (option.wishProgress) {
+      updatedWishes.forEach((wish, idx) => {
+        const current = newWishProgress[wish.id] || 0;
+        const next = Math.min(100, current + option.wishProgress!);
+        newWishProgress[wish.id] = next;
+        if (next >= 100 && !wish.granted) {
+          updatedWishes[idx] = { ...wish, granted: true };
+          memoriesToAdd.push({
+            characterId,
+            locationId,
+            type: 'wish_granted',
+            title: `愿望实现：${wish.title}`,
+            description: wish.description,
+            impactOnDream: 30,
+          });
+        }
+      });
+    }
+    if (option.fearProgress) {
+      updatedFears.forEach((fear, idx) => {
+        const current = newFearProgress[fear.id] || 0;
+        const next = Math.min(100, current + option.fearProgress!);
+        newFearProgress[fear.id] = next;
+        if (next >= 100 && !fear.confronted) {
+          updatedFears[idx] = { ...fear, confronted: true };
+          memoriesToAdd.push({
+            characterId,
+            locationId,
+            type: 'confrontation',
+            title: `直面恐惧：${fear.title}`,
+            description: fear.description,
+            impactOnDream: 35,
+          });
+        }
+      });
+    }
+    if (option.unlocksLocationId) {
+      const loc = state.dreamLocations.find((l) => l.id === option.unlocksLocationId);
+      if (loc) {
+        memoriesToAdd.push({
+          characterId,
+          locationId: option.unlocksLocationId,
+          type: 'discovery',
+          title: `新道路：${loc.name}`,
+          description: loc.description,
+          impactOnDream: 15,
+        });
+        setTimeout(() => {
+          get().discoverDreamLocation(option.unlocksLocationId!);
+        }, 0);
+      }
+    }
+    if (option.outcome === 'revelation') {
+      memoriesToAdd.push({
+        characterId,
+        locationId,
+        type: 'revelation',
+        title: encounter.title,
+        description: option.impactDescription,
+        impactOnDream: 20,
+      });
+    } else {
+      memoriesToAdd.push({
+        characterId,
+        locationId,
+        type: 'encounter',
+        title: encounter.title,
+        description: option.impactDescription,
+        impactOnDream: 10,
+      });
+    }
+    let newLevel = dreamState.dreamLevel;
+    const totalImpact = memoriesToAdd.reduce((sum, m) => sum + m.impactOnDream, 0);
+    const currentMemories = dreamState.dreamMemories.length + memoriesToAdd.length;
+    if (currentMemories >= newLevel * 5 && newLevel < 10) {
+      newLevel = newLevel + 1;
+    }
+    const newEncountered = new Set(dreamState.encounteredCreatureIds);
+    if (encounter.creatureId) {
+      newEncountered.add(encounter.creatureId);
+    }
+    const updated: CharacterDreamState = {
+      ...dreamState,
+      lucidity: newLucidity,
+      dreamStability: newStability,
+      dreamLevel: newLevel,
+      innerWishes: updatedWishes,
+      innerFears: updatedFears,
+      encounteredCreatureIds: Array.from(newEncountered),
+    };
+    set({
+      characterDreamStates: { ...state.characterDreamStates, [characterId]: updated },
+      wishProgress: newWishProgress,
+      fearProgress: newFearProgress,
+    });
+    memoriesToAdd.forEach((m) => get().addDreamMemory(m));
+    if (newLevel > dreamState.dreamLevel) {
+      const trigger = DREAM_EVOLUTION_TRIGGERS.find((t) => t.type === 'dream_level_up');
+      if (trigger && trigger.distortionShift) {
+        get().updateDistortion(trigger.distortionShift);
+      }
+    }
+  },
+  closeDreamEncounter: () => set({ currentDreamEncounter: null }),
+  grantWish: (wishId) => {
+    const state = get();
+    const characterId = state.activeDreamCharacterId;
+    if (!characterId) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    const updatedWishes = dreamState.innerWishes.map((w) =>
+      w.id === wishId ? { ...w, granted: true } : w
+    );
+    const wish = dreamState.innerWishes.find((w) => w.id === wishId);
+    if (wish) {
+      get().addDreamMemory({
+        characterId,
+        locationId: state.activeDreamLocationId || 'dl1',
+        type: 'wish_granted',
+        title: `愿望实现：${wish.title}`,
+        description: wish.description,
+        impactOnDream: 30,
+      });
+    }
+    set({
+      characterDreamStates: {
+        ...state.characterDreamStates,
+        [characterId]: { ...dreamState, innerWishes: updatedWishes },
+      },
+    });
+  },
+  confrontFear: (fearId) => {
+    const state = get();
+    const characterId = state.activeDreamCharacterId;
+    if (!characterId) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    const updatedFears = dreamState.innerFears.map((f) =>
+      f.id === fearId ? { ...f, confronted: true } : f
+    );
+    const fear = dreamState.innerFears.find((f) => f.id === fearId);
+    if (fear) {
+      get().addDreamMemory({
+        characterId,
+        locationId: state.activeDreamLocationId || 'dl1',
+        type: 'confrontation',
+        title: `直面恐惧：${fear.title}`,
+        description: fear.description,
+        impactOnDream: 35,
+      });
+    }
+    set({
+      characterDreamStates: {
+        ...state.characterDreamStates,
+        [characterId]: { ...dreamState, innerFears: updatedFears },
+      },
+    });
+  },
+  discoverDreamLocation: (locationId) => {
+    const state = get();
+    const characterId = state.activeDreamCharacterId;
+    if (!characterId) return;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    if (dreamState.discoveredLocationIds.includes(locationId)) return;
+    const updatedLocations = state.dreamLocations.map((l) =>
+      l.id === locationId ? { ...l, discovered: true } : l
+    );
+    set({
+      dreamLocations: updatedLocations,
+      characterDreamStates: {
+        ...state.characterDreamStates,
+        [characterId]: {
+          ...dreamState,
+          discoveredLocationIds: [...dreamState.discoveredLocationIds, locationId],
+        },
+      },
+    });
+  },
+  addDreamMemory: (memory) => {
+    const state = get();
+    const { characterId } = memory;
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    const newMemory: DreamMemory = {
+      ...memory,
+      id: `mem_${characterId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: Date.now(),
+    };
+    const currentMemories = [...dreamState.dreamMemories, newMemory];
+    let newLayer = dreamState.unlockedDreamLayers;
+    const layerThresholds = [3, 8, 15, 25, 40];
+    for (const threshold of layerThresholds) {
+      if (currentMemories.length >= threshold && newLayer <= layerThresholds.indexOf(threshold) + 1) {
+        newLayer = layerThresholds.indexOf(threshold) + 2;
+      }
+    }
+    set({
+      characterDreamStates: {
+        ...state.characterDreamStates,
+        [characterId]: {
+          ...dreamState,
+          dreamMemories: currentMemories,
+          unlockedDreamLayers: newLayer,
+        },
+      },
+    });
+  },
+  getCharacterDreamState: (characterId) => {
+    return get().characterDreamStates[characterId];
+  },
+  levelUpDream: (characterId) => {
+    const state = get();
+    const dreamState = state.characterDreamStates[characterId];
+    if (!dreamState) return;
+    const newLevel = Math.min(10, dreamState.dreamLevel + 1);
+    set({
+      characterDreamStates: {
+        ...state.characterDreamStates,
+        [characterId]: { ...dreamState, dreamLevel: newLevel },
+      },
+    });
+  },
+  updateDistortion: (amount) => {
+    const state = get();
+    set({
+      distortionLevel: Math.max(0, Math.min(100, state.distortionLevel + amount)),
+    });
+  },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedRegion: (region) => set({ selectedRegion: region }),

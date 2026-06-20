@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe, Wand2, ScrollText, Film, GraduationCap, Zap } from 'lucide-react';
+import { BookOpen, Search, Sparkles, Menu, X, Crown, Globe, Wand2, ScrollText, Film, GraduationCap, Zap, Moon } from 'lucide-react';
 import { useStoryStore } from '@/store/storyStore';
 
 export default function Navbar() {
@@ -117,6 +117,17 @@ export default function Navbar() {
               <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-fairy-gold animate-twinkle" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
             </Link>
+            <Link
+              to="/dream-world"
+              className="font-body text-gray-700 hover:text-fairy-purple transition-colors duration-300 relative group"
+            >
+              <span className="inline-flex items-center gap-1">
+                <Moon className="w-4 h-4 inline-block" />
+                梦境层
+              </span>
+              <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-violet-500 animate-twinkle" />
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-fairy group-hover:w-full transition-all duration-300" />
+            </Link>
 
             <form onSubmit={handleSearch} className="relative">
               <input
@@ -231,6 +242,17 @@ export default function Navbar() {
                 <Zap className="w-4 h-4" />
                 宇宙事件
                 <span className="w-2 h-2 rounded-full bg-fairy-gold animate-twinkle" />
+              </span>
+            </Link>
+            <Link
+              to="/dream-world"
+              className="block font-body text-gray-700 hover:text-fairy-purple transition-colors py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Moon className="w-4 h-4" />
+                童话梦境层
+                <span className="w-2 h-2 rounded-full bg-violet-500 animate-twinkle" />
               </span>
             </Link>
             <form onSubmit={handleSearch} className="relative">

@@ -418,10 +418,35 @@ export const useStoryStore = create<StoryState>((set, get) => ({
 
   isStoryWeatherUnlocked: (storyId, storyRegion, storyTags): boolean => {
     if (get().unlockedWeatherStories.has(storyId)) return true;
+    if (!get().isRegionUnlocked(storyRegion)) return false;
     const weather = get().getWeatherByRegion(storyRegion);
     const effect = get().getWeatherEffect(weather);
     if (effect.storyUnlockTags.length === 0) return true;
-    return storyTags.some((tag) => effect.storyUnlockTags.some((unlockTag) => tag.includes(unlockTag) || unlockTag.includes(tag)));
+    const normaliz = (s: string) => s.replace(/[\s-_]/g, '').toLowerCase();
+    const relatedKeywords: Record<string, string[]> = {
+      '冬日': ['冬天', '冬季', '寒冬', '冰雪', '雪'],
+      '冬天': ['冬日', '冬季', '寒冬', '冰雪', '雪', '寒冷'],
+      '冰雪': ['雪', '冬天', '冬日', '寒冷', '冰'],
+      '雪': ['冰雪', '冬天', '冬日', '雪花', '降雪'],
+      '寒冷': ['冬天', '冬日', '冰雪', '严寒', '冷'],
+      '愿望': ['许愿', '梦想', '希望', '祝福'],
+      '星': ['星星', '星空', '流星', '星光'],
+      '奇迹': ['神奇', '魔法', '惊喜'],
+      '魔法': ['奇迹', '神奇', '巫术', '法术'],
+    };
+    const hasMatchingTag = storyTags.some((tag) => {
+      const normTag = normaliz(tag);
+      return effect.storyUnlockTags.some((unlockTag) => {
+        const normUnlock = normaliz(unlockTag);
+        if (normTag.includes(normUnlock) || normUnlock.includes(normTag)) return true;
+        const tagRelatives = relatedKeywords[unlockTag] || [];
+        return tagRelatives.some((rel) => normaliz(rel).includes(normTag) || normTag.includes(normaliz(rel)));
+      });
+    });
+    if (effect.unlockedRegions.length > 0 && effect.unlockedRegions.includes(storyRegion)) {
+      return true;
+    }
+    return hasMatchingTag;
   },
 
   unlockWeatherStory: (storyId) => {

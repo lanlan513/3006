@@ -419,7 +419,7 @@ export default function FairyMap() {
 
       <Navbar />
 
-      <div className="fixed top-20 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] lg:right-6">
+      <div className="fixed top-20 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] lg:right-6 pb-4">
         <div className="mb-2 flex justify-end">
           <button
             onClick={() => setShowWeatherPanel((p) => !p)}
@@ -431,7 +431,7 @@ export default function FairyMap() {
             style={!isDarkWeather ? { boxShadow: `0 4px 20px ${weatherInfo.color}40` } : {}}
           >
             <span className="text-lg">{weatherInfo.icon}</span>
-            <span>{currentViewWeather}</span>
+            <span className="hidden sm:inline">{currentViewWeather}</span>
             <CloudSun className="w-4 h-4 ml-1" />
           </button>
         </div>

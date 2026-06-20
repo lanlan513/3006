@@ -109,9 +109,9 @@ export default function WeatherPanel({ region = '全部', onClose, compact = fal
   }
 
   return (
-    <div className="fairy-card overflow-hidden">
+    <div className="fairy-card overflow-hidden flex flex-col max-h-[calc(100vh-160px)]">
       <div
-        className="relative p-4 bg-gradient-to-br text-white overflow-hidden"
+        className="relative p-4 bg-gradient-to-br text-white overflow-hidden flex-shrink-0"
         style={{
           background: `linear-gradient(135deg, ${weatherInfo.color}dd, ${weatherInfo.color}99 60%, ${weatherInfo.color}66)`,
         }}
@@ -157,7 +157,7 @@ export default function WeatherPanel({ region = '全部', onClose, compact = fal
 
           <p className="text-sm text-white/90 font-body leading-relaxed mb-3">{weatherInfo.description}</p>
 
-          <div className="flex items-center gap-3 text-xs text-white/80 font-body">
+          <div className="flex items-center gap-3 text-xs text-white/80 font-body flex-wrap">
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
               <RefreshCw className="w-3 h-3 animate-spin-slow" />
               下次变化：{formatTime(forecast.nextWeatherIn)}
@@ -175,7 +175,7 @@ export default function WeatherPanel({ region = '全部', onClose, compact = fal
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 overflow-y-auto">
         <div>
           <h4 className="font-fairy text-sm text-gray-700 mb-3 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-fairy-purple" />

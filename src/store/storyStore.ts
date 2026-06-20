@@ -24,6 +24,13 @@ import type {
   SkillBadge,
   Title,
   CourseCategory,
+  CosmicEvent,
+  ActiveCosmicEvent,
+  WorldState,
+  WorldBuff,
+  EventLeaderboardEntry,
+  EventHistoryRecord,
+  CosmicEventTab,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
@@ -31,6 +38,14 @@ import { interactiveStories } from '@/data/interactiveStories';
 import { magicItems } from '@/data/magicItems';
 import { creatures } from '@/data/creatures';
 import { courses, allBadges, allTitles, getCourseById } from '@/data/academy';
+import {
+  cosmicEvents,
+  initialWorldState,
+  initialLeaderboard,
+  initialEventHistory,
+  getEraNameByLevel,
+  getCosmicEventById,
+} from '@/data/cosmicEvents';
 
 interface StoryState {
   stories: Story[];
@@ -67,6 +82,31 @@ interface StoryState {
   quizScores: Record<string, number>;
   lessonStars: Record<string, number>;
   selectedAcademyCategory: CourseCategory | '全部';
+  cosmicEvents: CosmicEvent[];
+  activeEvents: ActiveCosmicEvent[];
+  worldState: WorldState;
+  eventLeaderboard: EventLeaderboardEntry[];
+  eventHistory: EventHistoryRecord[];
+  playerEventScore: number;
+  playerEventsParticipated: number;
+  playerEventsCompleted: number;
+  playerEventTitles: string[];
+  selectedEventTab: CosmicEventTab;
+  setSelectedEventTab: (tab: CosmicEventTab) => void;
+  triggerRandomEvent: () => void;
+  startEvent: (eventId: string) => void;
+  endEvent: (eventId: string, outcome: 'success' | 'partial' | 'failure') => void;
+  updateEventProgress: (eventId: string, objectiveId: string, amount: number) => void;
+  completeEventObjective: (eventId: string, objectiveId: string) => void;
+  claimEventReward: (eventId: string, rewardIndex: number) => void;
+  getActiveEventById: (eventId: string) => ActiveCosmicEvent | undefined;
+  getCurrentActiveEvent: () => ActiveCosmicEvent | undefined;
+  addWorldBuff: (buff: WorldBuff) => void;
+  removeWorldBuff: (buffId: string) => void;
+  updateWorldState: (updates: Partial<WorldState>) => void;
+  levelUpWorld: () => void;
+  addEventHistory: (record: EventHistoryRecord) => void;
+  incrementPlayerEventScore: (amount: number) => void;
   setSearchQuery: (query: string) => void;
   setSelectedRegion: (region: Region) => void;
   setSelectedCharacterType: (type: CharacterType) => void;
@@ -167,6 +207,16 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   quizScores: {},
   lessonStars: {},
   selectedAcademyCategory: '全部',
+  cosmicEvents,
+  activeEvents: [],
+  worldState: initialWorldState,
+  eventLeaderboard: initialLeaderboard,
+  eventHistory: initialEventHistory,
+  playerEventScore: 0,
+  playerEventsParticipated: 0,
+  playerEventsCompleted: 0,
+  playerEventTitles: [],
+  selectedEventTab: 'current',
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedRegion: (region) => set({ selectedRegion: region }),
@@ -633,6 +683,296 @@ export const useStoryStore = create<StoryState>((set, get) => ({
 
     const prevLesson = sortedLessons[lessonIndex - 1];
     return get().completedLessons.has(prevLesson.id);
+  },
+
+  setSelectedEventTab: (tab) => set({ selectedEventTab: tab }),
+
+  triggerRandomEvent: () => {
+    const state = get();
+    const availableEvents = state.cosmicEvents.filter(
+      (e) => !state.activeEvents.some((ae) => ae.eventId === e.id)
+    );
+    if (availableEvents.length === 0) return;
+
+    const weights: Record<string, number> = {
+      minor: 40,
+      moderate: 30,
+      major: 20,
+      catastrophic: 10,
+    };
+
+    const weightedEvents = availableEvents.flatMap((e) =>
+      Array(weights[e.severity] || 10).fill(e)
+    );
+
+    const randomEvent = weightedEvents[Math.floor(Math.random() * weightedEvents.length)];
+    get().startEvent(randomEvent.id);
+  },
+
+  startEvent: (eventId) => {
+    const state = get();
+    const event = getCosmicEventById(eventId);
+    if (!event) return;
+    if (state.activeEvents.some((ae) => ae.eventId === eventId)) return;
+
+    const progress: Record<string, number> = {};
+    event.objectives.forEach((obj) => {
+      progress[obj.id] = 0;
+    });
+
+    const activeEvent: ActiveCosmicEvent = {
+      eventId,
+      status: 'active',
+      startTime: Date.now(),
+      endTime: Date.now() + event.duration * 1000,
+      progress,
+      completedObjectives: [],
+      claimedRewards: [],
+      participantCount: 1,
+    };
+
+    set({
+      activeEvents: [...state.activeEvents, activeEvent],
+      playerEventsParticipated: state.playerEventsParticipated + 1,
+    });
+  },
+
+  endEvent: (eventId, outcome) => {
+    const state = get();
+    const activeEvent = state.activeEvents.find((ae) => ae.eventId === eventId);
+    const event = getCosmicEventById(eventId);
+    if (!activeEvent || !event) return;
+
+    const newActiveEvents = state.activeEvents.filter((ae) => ae.eventId !== eventId);
+
+    const historyRecord: EventHistoryRecord = {
+      eventId,
+      eventName: event.name,
+      eventType: event.type,
+      emoji: event.emoji,
+      severity: event.severity,
+      startTime: activeEvent.startTime,
+      endTime: Date.now(),
+      outcome,
+      worldImpact:
+        outcome === 'success'
+          ? `成功应对了${event.name}，世界变得更加美好`
+          : outcome === 'partial'
+          ? `部分完成了${event.name}的挑战，世界发生了一些变化`
+          : `${event.name}对世界造成了一定影响`,
+      totalParticipants: activeEvent.participantCount,
+      playerParticipated: true,
+      playerScore: activeEvent.completedObjectives.length * 100,
+      playerRank: Math.floor(Math.random() * 100) + 1,
+    };
+
+    let stabilityChange = 0;
+    let magicChange = 0;
+    if (outcome === 'success') {
+      stabilityChange = 5;
+      magicChange = 10;
+    } else if (outcome === 'partial') {
+      stabilityChange = 0;
+      magicChange = 5;
+    } else {
+      stabilityChange = -10;
+      magicChange = 3;
+    }
+
+    const completedCount = state.worldState.totalEventsCompleted + 1;
+    const newWorldLevel = Math.floor(completedCount / 3) + 1;
+    const eraInfo = getEraNameByLevel(Math.min(newWorldLevel, 7));
+
+    const newWorldState: WorldState = {
+      ...state.worldState,
+      worldLevel: Math.min(newWorldLevel, 7),
+      totalEventsCompleted: completedCount,
+      worldStability: Math.max(0, Math.min(100, state.worldState.worldStability + stabilityChange)),
+      magicDensity: Math.max(0, Math.min(100, state.worldState.magicDensity + magicChange)),
+      era: eraInfo.era,
+      eraEmoji: eraInfo.emoji,
+      currentEraDescription: eraInfo.description,
+    };
+
+    if (newWorldLevel > state.worldState.worldLevel && newWorldLevel <= 7) {
+      const newEraEntry = {
+        era: eraInfo.era,
+        eraEmoji: eraInfo.emoji,
+        startedAt: Date.now(),
+        majorEvents: [event.name],
+        description: eraInfo.description,
+      };
+      const updatedHistory = [...state.worldState.eraHistory];
+      if (updatedHistory.length > 0) {
+        updatedHistory[updatedHistory.length - 1].endedAt = Date.now();
+      }
+      newWorldState.eraHistory = [...updatedHistory, newEraEntry];
+    }
+
+    set({
+      activeEvents: newActiveEvents,
+      worldState: newWorldState,
+      eventHistory: [historyRecord, ...state.eventHistory],
+      playerEventsCompleted: outcome === 'success' || outcome === 'partial'
+        ? state.playerEventsCompleted + 1
+        : state.playerEventsCompleted,
+    });
+  },
+
+  updateEventProgress: (eventId, objectiveId, amount) => {
+    const state = get();
+    const event = getCosmicEventById(eventId);
+    const activeEvent = state.activeEvents.find((ae) => ae.eventId === eventId);
+    if (!event || !activeEvent) return;
+
+    const objective = event.objectives.find((o) => o.id === objectiveId);
+    if (!objective) return;
+
+    const currentProgress = activeEvent.progress[objectiveId] || 0;
+    const newProgress = Math.min(objective.target, currentProgress + amount);
+
+    const newActiveEvents = state.activeEvents.map((ae) => {
+      if (ae.eventId !== eventId) return ae;
+      return {
+        ...ae,
+        progress: {
+          ...ae.progress,
+          [objectiveId]: newProgress,
+        },
+      };
+    });
+
+    set({ activeEvents: newActiveEvents });
+
+    if (newProgress >= objective.target && !activeEvent.completedObjectives.includes(objectiveId)) {
+      get().completeEventObjective(eventId, objectiveId);
+    }
+  },
+
+  completeEventObjective: (eventId, objectiveId) => {
+    const state = get();
+    const activeEvent = state.activeEvents.find((ae) => ae.eventId === eventId);
+    const event = getCosmicEventById(eventId);
+    if (!activeEvent || !event) return;
+    if (activeEvent.completedObjectives.includes(objectiveId)) return;
+
+    const objective = event.objectives.find((o) => o.id === objectiveId);
+    if (!objective) return;
+
+    const newActiveEvents = state.activeEvents.map((ae) => {
+      if (ae.eventId !== eventId) return ae;
+      return {
+        ...ae,
+        completedObjectives: [...ae.completedObjectives, objectiveId],
+      };
+    });
+
+    set({
+      activeEvents: newActiveEvents,
+      playerEventScore: state.playerEventScore + objective.reward,
+    });
+  },
+
+  claimEventReward: (eventId, rewardIndex) => {
+    const state = get();
+    const activeEvent = state.activeEvents.find((ae) => ae.eventId === eventId);
+    if (!activeEvent) return;
+
+    const rewardKey = `reward-${rewardIndex}`;
+    if (activeEvent.claimedRewards.includes(rewardKey)) return;
+
+    const newActiveEvents = state.activeEvents.map((ae) => {
+      if (ae.eventId !== eventId) return ae;
+      return {
+        ...ae,
+        claimedRewards: [...ae.claimedRewards, rewardKey],
+      };
+    });
+
+    set({ activeEvents: newActiveEvents });
+  },
+
+  getActiveEventById: (eventId) => {
+    return get().activeEvents.find((ae) => ae.eventId === eventId);
+  },
+
+  getCurrentActiveEvent: () => {
+    const active = get().activeEvents.filter((ae) => ae.status === 'active');
+    return active.length > 0 ? active[0] : undefined;
+  },
+
+  addWorldBuff: (buff) => {
+    const state = get();
+    set({
+      worldState: {
+        ...state.worldState,
+        globalBuffs: [...state.worldState.globalBuffs, buff],
+      },
+    });
+  },
+
+  removeWorldBuff: (buffId) => {
+    const state = get();
+    set({
+      worldState: {
+        ...state.worldState,
+        globalBuffs: state.worldState.globalBuffs.filter((b) => b.id !== buffId),
+      },
+    });
+  },
+
+  updateWorldState: (updates) => {
+    const state = get();
+    set({
+      worldState: {
+        ...state.worldState,
+        ...updates,
+      },
+    });
+  },
+
+  levelUpWorld: () => {
+    const state = get();
+    const newLevel = Math.min(state.worldState.worldLevel + 1, 7);
+    const eraInfo = getEraNameByLevel(newLevel);
+
+    const updatedHistory = [...state.worldState.eraHistory];
+    if (updatedHistory.length > 0) {
+      updatedHistory[updatedHistory.length - 1].endedAt = Date.now();
+    }
+
+    const newEraEntry = {
+      era: eraInfo.era,
+      eraEmoji: eraInfo.emoji,
+      startedAt: Date.now(),
+      majorEvents: ['世界等级提升'],
+      description: eraInfo.description,
+    };
+
+    set({
+      worldState: {
+        ...state.worldState,
+        worldLevel: newLevel,
+        era: eraInfo.era,
+        eraEmoji: eraInfo.emoji,
+        currentEraDescription: eraInfo.description,
+        eraHistory: [...updatedHistory, newEraEntry],
+      },
+    });
+  },
+
+  addEventHistory: (record) => {
+    const state = get();
+    set({
+      eventHistory: [record, ...state.eventHistory],
+    });
+  },
+
+  incrementPlayerEventScore: (amount) => {
+    const state = get();
+    set({
+      playerEventScore: state.playerEventScore + amount,
+    });
   },
 }));
 

@@ -645,3 +645,149 @@ export type PotionGameData = {
   description: string;
   ingredients: { id: string; name: string; emoji: string; correctOrder: number }[];
 };
+
+export type CosmicEventType =
+  | '巨龙苏醒'
+  | '魔镜失控'
+  | '时光塔崩塌'
+  | '星辰坠落'
+  | '魔法风暴'
+  | '精灵叛乱'
+  | '水晶觉醒'
+  | '梦境入侵'
+  | '彩虹断裂'
+  | '深渊裂隙';
+
+export const COSMIC_EVENT_TYPES: CosmicEventType[] = [
+  '巨龙苏醒',
+  '魔镜失控',
+  '时光塔崩塌',
+  '星辰坠落',
+  '魔法风暴',
+  '精灵叛乱',
+  '水晶觉醒',
+  '梦境入侵',
+  '彩虹断裂',
+  '深渊裂隙',
+];
+
+export type CosmicEventStatus = 'upcoming' | 'active' | 'completed';
+
+export type CosmicEventSeverity = 'minor' | 'moderate' | 'major' | 'catastrophic';
+
+export const COSMIC_EVENT_SEVERITIES: { severity: CosmicEventSeverity; name: string; color: string }[] = [
+  { severity: 'minor', name: '小型事件', color: '#60A5FA' },
+  { severity: 'moderate', name: '中型事件', color: '#A78BFA' },
+  { severity: 'major', name: '大型事件', color: '#F59E0B' },
+  { severity: 'catastrophic', name: '宇宙级事件', color: '#EF4444' },
+];
+
+export interface CosmicEventEffect {
+  type: 'weather' | 'region' | 'character' | 'story' | 'magicItem' | 'creature';
+  target: string;
+  modifier: number;
+  description: string;
+}
+
+export interface CosmicEvent {
+  id: string;
+  type: CosmicEventType;
+  name: string;
+  description: string;
+  backstory: string;
+  emoji: string;
+  coverColor: string;
+  severity: CosmicEventSeverity;
+  region: Region | '全部';
+  duration: number;
+  effects: CosmicEventEffect[];
+  objectives: EventObjective[];
+  rewards: EventReward[];
+  triggerCondition?: string;
+}
+
+export interface EventObjective {
+  id: string;
+  description: string;
+  type: 'read' | 'collect' | 'explore' | 'create' | 'discover';
+  target: number;
+  reward: number;
+}
+
+export interface EventReward {
+  type: 'title' | 'badge' | 'magicItem' | 'experience' | 'currency';
+  name: string;
+  emoji: string;
+  rarity: MagicItemRarity;
+}
+
+export interface ActiveCosmicEvent {
+  eventId: string;
+  status: CosmicEventStatus;
+  startTime: number;
+  endTime: number;
+  progress: Record<string, number>;
+  completedObjectives: string[];
+  claimedRewards: string[];
+  participantCount: number;
+}
+
+export interface WorldState {
+  era: string;
+  eraEmoji: string;
+  worldLevel: number;
+  totalEventsCompleted: number;
+  worldStability: number;
+  magicDensity: number;
+  unlockedRegions: Region[];
+  globalBuffs: WorldBuff[];
+  currentEraDescription: string;
+  eraHistory: EraEntry[];
+}
+
+export interface WorldBuff {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  duration: number;
+  startTime: number;
+  effects: CosmicEventEffect[];
+}
+
+export interface EraEntry {
+  era: string;
+  eraEmoji: string;
+  startedAt: number;
+  endedAt?: number;
+  majorEvents: string[];
+  description: string;
+}
+
+export interface EventLeaderboardEntry {
+  rank: number;
+  playerName: string;
+  avatarEmoji: string;
+  score: number;
+  eventsParticipated: number;
+  eventsCompleted: number;
+  titles: string[];
+}
+
+export interface EventHistoryRecord {
+  eventId: string;
+  eventName: string;
+  eventType: CosmicEventType;
+  emoji: string;
+  severity: CosmicEventSeverity;
+  startTime: number;
+  endTime: number;
+  outcome: 'success' | 'partial' | 'failure';
+  worldImpact: string;
+  totalParticipants: number;
+  playerParticipated: boolean;
+  playerScore?: number;
+  playerRank?: number;
+}
+
+export type CosmicEventTab = 'current' | 'history' | 'leaderboard' | 'worldState';

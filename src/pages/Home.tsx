@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift, ScrollText, Trophy, Film } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift, ScrollText, Trophy, Film, Zap } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SearchBar from '@/components/SearchBar';
 import StoryCard from '@/components/StoryCard';
@@ -524,6 +524,84 @@ export default function Home() {
           >
             查看全部 <ArrowRight className="w-4 h-4" />
           </Link>
+        </section>
+
+        <section className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fairy-gold via-pink-500 to-fairy-purple flex items-center justify-center relative overflow-hidden">
+                <Zap className="w-6 h-6 text-white relative z-10" />
+                <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-gold to-orange-400 text-white text-[10px] rounded-full font-body font-bold shadow-md">
+                  NEW
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-fairy text-gray-800">童话宇宙事件</h2>
+                <p className="text-sm text-gray-500 font-body">世界演化系统，定期触发神秘事件</p>
+              </div>
+            </div>
+            <Link
+              to="/cosmic-events"
+              className="hidden md:inline-flex items-center gap-1 text-fairy-purple font-body hover:gap-2 transition-all"
+            >
+              进入事件中心 <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="bg-gradient-to-br from-fairy-purple/20 via-fairy-pink/10 to-fairy-gold/20 rounded-3xl p-6 md:p-8 border border-fairy-purple/20 mb-8 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-30">
+              {[...Array(20)].map((_, i) => (
+                <Sparkles
+                  key={i}
+                  className="absolute text-fairy-gold animate-twinkle"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    width: `${8 + Math.random() * 12}px`,
+                    animationDelay: `${Math.random() * 3}s`,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+              <div className="flex gap-3">
+                {['🐉', '🪞', '⏰', '⭐', '🌪️'].map((emoji, i) => (
+                  <div
+                    key={i}
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center bg-white/80 shadow-md animate-float"
+                    style={{ animationDelay: `${i * 0.3}s` }}
+                  >
+                    <span className="text-3xl md:text-4xl">{emoji}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="font-fairy text-xl md:text-2xl text-gray-800 mb-2">
+                  见证童话世界的持续演化
+                </h3>
+                <p className="text-gray-600 font-body leading-relaxed mb-4">
+                  巨龙苏醒、魔镜失控、时光塔崩塌、星辰坠落……
+                  神秘的宇宙事件周期性降临童话世界。
+                  参与事件，完成挑战，改变世界的命运，
+                  获得珍稀称号与传说道具，见证时代的变迁由你书写！
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  {['10+ 宇宙事件', '世界等级系统', '时代演化历史', '事件排行榜'].map((tag) => (
+                    <span key={tag} className="fairy-tag text-xs bg-white/50 text-gray-700">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <Link
+                to="/cosmic-events"
+                className="fairy-button inline-flex items-center gap-2 whitespace-nowrap"
+              >
+                <Zap className="w-5 h-5" />
+                进入事件中心
+              </Link>
+            </div>
+          </div>
         </section>
 
         <section id="bookshelf" className="container mx-auto px-4 py-12">

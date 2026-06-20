@@ -10,6 +10,7 @@ import CreaturePedia from '@/pages/CreaturePedia';
 import FairyTheater from '@/pages/FairyTheater';
 import FairyAcademy from '@/pages/FairyAcademy';
 import CourseDetail from '@/pages/CourseDetail';
+import CosmicEvents from '@/pages/CosmicEvents';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/fairy-theater" element={<FairyTheater />} />
         <Route path="/academy" element={<FairyAcademy />} />
         <Route path="/academy/:id" element={<CourseDetail />} />
+        <Route path="/cosmic-events" element={<CosmicEvents />} />
       </Routes>
     </Router>
   );

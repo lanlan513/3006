@@ -455,3 +455,80 @@ export interface WeatherEffect {
   storyUnlockTags: string[];
   explorationModifier: number;
 }
+
+export type TheaterAssetType = 'character' | 'scene' | 'prop';
+
+export interface TheaterAsset {
+  id: string;
+  type: TheaterAssetType;
+  name: string;
+  emoji: string;
+  category: string;
+  description: string;
+  coverColor: string;
+}
+
+export type AnimationType = 'none' | 'bounce' | 'float' | 'twinkle' | 'shake' | 'spin' | 'fadeIn' | 'slideLeft' | 'slideRight';
+
+export const ANIMATION_TYPES: { type: AnimationType; name: string; icon: string }[] = [
+  { type: 'none', name: '无动画', icon: '⏸️' },
+  { type: 'bounce', name: '弹跳', icon: '⬆️' },
+  { type: 'float', name: '漂浮', icon: '☁️' },
+  { type: 'twinkle', name: '闪烁', icon: '✨' },
+  { type: 'shake', name: '摇晃', icon: '💫' },
+  { type: 'spin', name: '旋转', icon: '🌀' },
+  { type: 'fadeIn', name: '淡入', icon: '🌅' },
+  { type: 'slideLeft', name: '左滑入', icon: '👈' },
+  { type: 'slideRight', name: '右滑入', icon: '👉' },
+];
+
+export interface PlacedAsset {
+  instanceId: string;
+  assetId: string;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  animation: AnimationType;
+  zIndex: number;
+  dialogueId?: string;
+}
+
+export interface SceneDialogue {
+  id: string;
+  speakerName: string;
+  speakerEmoji: string;
+  text: string;
+  color: string;
+}
+
+export interface TheaterScene {
+  id: string;
+  name: string;
+  backgroundId: string;
+  placedAssets: PlacedAsset[];
+  dialogues: SceneDialogue[];
+  narrative: string;
+  duration: number;
+}
+
+export interface TheaterBackground {
+  id: string;
+  name: string;
+  emoji: string;
+  gradient: string;
+  description: string;
+}
+
+export interface TheaterPerformance {
+  id: string;
+  title: string;
+  description: string;
+  scenes: TheaterScene[];
+  createdAt: number;
+  updatedAt: number;
+  coverSceneId?: string;
+}
+
+export type TheaterEditorMode = 'edit' | 'play';
+export type TheaterPanelTab = 'characters' | 'scenes' | 'props' | 'storyboard' | 'dialogue';

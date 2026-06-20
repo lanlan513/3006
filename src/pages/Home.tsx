@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift, ScrollText, Trophy } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Heart, BookMarked, Users, Crown, Globe, GitBranch, Wand2, Star, Gift, ScrollText, Trophy, Film } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SearchBar from '@/components/SearchBar';
 import StoryCard from '@/components/StoryCard';
@@ -84,6 +84,13 @@ export default function Home() {
               <ScrollText className="w-5 h-5" />
               生物图鉴
               <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-purple to-pink-500 text-white text-[10px] rounded-full font-body font-bold shadow-md animate-twinkle">
+                NEW
+              </span>
+            </Link>
+            <Link to="/fairy-theater" className="fairy-button inline-flex items-center gap-2 relative overflow-hidden">
+              <Film className="w-5 h-5" />
+              童话剧场
+              <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-gold to-orange-400 text-white text-[10px] rounded-full font-body font-bold shadow-md animate-twinkle">
                 NEW
               </span>
             </Link>
@@ -209,6 +216,87 @@ export default function Home() {
                 </Link>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Fairy Theater Section */}
+        <section className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-rainbow flex items-center justify-center relative">
+                <Film className="w-6 h-6 text-white" />
+                <span className="absolute -top-1 -right-1 px-2 py-0.5 bg-gradient-to-r from-fairy-gold to-orange-400 text-white text-[10px] rounded-full font-body font-bold shadow-md">
+                  NEW
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-fairy text-gray-800">童话剧场</h2>
+                <p className="text-sm text-gray-500 font-body">自由编排，演出属于你的童话故事</p>
+              </div>
+            </div>
+            <Link
+              to="/fairy-theater"
+              className="hidden md:inline-flex items-center gap-1 text-fairy-purple font-body hover:gap-2 transition-all"
+            >
+              立即创作 <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="bg-gradient-to-br from-amber-100/50 via-fairy-pink/30 to-fairy-purple/20 rounded-3xl p-6 md:p-8 mb-6 border border-fairy-purple/20">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-rainbow flex items-center justify-center shadow-fairy flex-shrink-0 relative overflow-hidden">
+                <Film className="w-10 h-10 md:w-12 md:h-12 text-white relative z-10" />
+                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="font-fairy text-xl md:text-2xl text-gray-800 mb-2">
+                  拖拽角色道具，亲手导演童话大戏
+                </h3>
+                <p className="text-gray-600 font-body leading-relaxed mb-4">
+                  从丰富的资源库中选择公主、王子、女巫等角色，搭配森林、城堡、海底等梦幻背景，
+                  添加魔法道具和场景元素，编写精彩对白和剧情。支持多幕剧创作、动画效果，
+                  保存并随时回放你的独家童话剧！
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  {['🎭 丰富角色库', '🏰 8种舞台背景', '✨ 动画特效', '💬 对白编辑器', '🎬 多幕剧情', '💾 保存分享'].map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 rounded-full bg-white/70 text-sm font-body text-fairy-purple border border-fairy-purple/20"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { emoji: '👸', title: '拖拽角色', desc: '将喜欢的童话角色拖到舞台上，自由摆放位置和大小' },
+              { emoji: '🎨', title: '切换背景', desc: '魔法森林、皇家城堡、冰雪王国...8种梦幻背景随心换' },
+              { emoji: '💬', title: '编写对白', desc: '为每个角色编写精彩对话，让故事生动有趣' },
+            ].map((item) => (
+              <div key={item.title} className="fairy-card p-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-fairy flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">{item.emoji}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-fairy text-lg text-gray-800 mb-1">{item.title}</h4>
+                    <p className="text-sm text-gray-500 font-body leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 text-center">
+            <Link to="/fairy-theater" className="fairy-button inline-flex items-center gap-2 text-base px-8 py-4">
+              <Film className="w-5 h-5" />
+              开始创作童话剧
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
         </section>
 

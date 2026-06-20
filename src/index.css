@@ -616,6 +616,110 @@ body {
   filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
 }
 
+/* Theater animations */
+.anim-bounce {
+  animation: theaterBounce 1s ease-in-out infinite;
+}
+@keyframes theaterBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
+.anim-float {
+  animation: theaterFloat 3s ease-in-out infinite;
+}
+@keyframes theaterFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.anim-shake {
+  animation: theaterShake 0.5s ease-in-out infinite;
+}
+@keyframes theaterShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.anim-spin {
+  animation: theaterSpin 3s linear infinite;
+}
+@keyframes theaterSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.anim-fadeIn {
+  animation: theaterFadeIn 1s ease-out;
+}
+@keyframes theaterFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.anim-slideLeft {
+  animation: theaterSlideLeft 0.8s ease-out;
+}
+@keyframes theaterSlideLeft {
+  from { opacity: 0; transform: translateX(-100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.anim-slideRight {
+  animation: theaterSlideRight 0.8s ease-out;
+}
+@keyframes theaterSlideRight {
+  from { opacity: 0; transform: translateX(100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.theater-stage-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.dragging-asset {
+  opacity: 0.7;
+  transform: scale(1.1);
+  cursor: grabbing !important;
+}
+
+.drop-zone-active {
+  box-shadow: inset 0 0 0 4px rgba(212, 165, 255, 0.6), 0 0 30px rgba(212, 165, 255, 0.3);
+}
+
+.dialogue-bubble {
+  position: relative;
+  background: white;
+  border-radius: 20px;
+  padding: 12px 18px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.dialogue-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 30px;
+  border-width: 10px 10px 0;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
+}
+
+.scene-thumbnail {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.scene-thumbnail:hover {
+  transform: translateY(-2px);
+}
+.scene-thumbnail.active {
+  ring: 3px;
+  ring-color: #D4A5FF;
+}
+
 .weather-sunny {
   position: absolute;
   inset: 0;

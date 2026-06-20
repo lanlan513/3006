@@ -16,6 +16,10 @@ import type {
   CreatureHabitat,
   CreatureAbilityType,
   DangerLevel,
+  WeatherType,
+  WeatherEffect,
+  WeatherForecast,
+  WEATHER_INFO,
 } from '@/types';
 import { stories } from '@/data/stories';
 import { characters } from '@/data/characters';
@@ -42,6 +46,10 @@ interface StoryState {
   combineSlots: (MagicItem | null)[];
   likedStories: Set<string>;
   storyProgress: Record<string, StoryProgress>;
+  regionWeathers: Record<Exclude<Region, '全部'>, WeatherType>;
+  currentGlobalWeather: WeatherType;
+  weatherChangeTimer: number;
+  unlockedWeatherStories: Set<string>;
   setSearchQuery: (query: string) => void;
   setSelectedRegion: (region: Region) => void;
   setSelectedCharacterType: (type: CharacterType) => void;
@@ -68,6 +76,16 @@ interface StoryState {
     route: EndingRoute
   ) => void;
   resetStoryProgress: (interactiveStoryId: string, startNodeId: string) => void;
+  setRegionWeather: (region: Exclude<Region, '全部'>, weather: WeatherType) => void;
+  setGlobalWeather: (weather: WeatherType) => void;
+  advanceWeather: () => void;
+  getWeatherByRegion: (region: Region) => WeatherType;
+  getWeatherEffect: (weather: WeatherType) => WeatherEffect;
+  getWeatherForecast: (region: Region) => WeatherForecast;
+  isRegionUnlocked: (region: Region) => boolean;
+  isStoryWeatherUnlocked: (storyId: string, storyRegion: Region, storyTags: string[]) => boolean;
+  unlockWeatherStory: (storyId: string) => void;
+  getCharacterWeatherBuff: (characterType: CharacterType, weather: WeatherType) => number;
 }
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -89,6 +107,22 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   combineSlots: [null, null, null, null, null],
   likedStories: new Set(),
   storyProgress: {},
+  regionWeathers: {
+    '丹麦': '晴朗',
+    '德国': '晴朗',
+    '中国': '花瓣雨',
+    '阿拉伯': '晴朗',
+    '古希腊': '晴朗',
+    '法国': '花瓣雨',
+    '俄罗斯': '白雪',
+    '日本': '花瓣雨',
+    '印度': '彩虹桥',
+    '北欧': '魔法极光',
+    '英国': '月光夜',
+  },
+  currentGlobalWeather: '晴朗',
+  weatherChangeTimer: 300,
+  unlockedWeatherStories: new Set(),
 
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedRegion: (region) => set({ selectedRegion: region }),
@@ -251,6 +285,155 @@ export const useStoryStore = create<StoryState>((set, get) => ({
         },
       },
     });
+  },
+
+  setRegionWeather: (region, weather) => {
+    const current = get().regionWeathers;
+    set({
+      regionWeathers: {
+        ...current,
+        [region]: weather,
+      },
+    });
+  },
+
+  setGlobalWeather: (weather) => {
+    set({ currentGlobalWeather: weather });
+  },
+
+  advanceWeather: () => {
+    const { regionWeathers, currentGlobalWeather } = get();
+    const weathers: WeatherType[] = ['晴朗', '白雪', '流星雨', '魔法极光', '糖果风暴', '花瓣雨', '月光夜', '彩虹桥'];
+    const randomWeather = (): WeatherType => weathers[Math.floor(Math.random() * weathers.length)];
+
+    const newWeathers = { ...regionWeathers };
+    const regions = Object.keys(newWeathers) as Exclude<Region, '全部'>[];
+    const regionsToChange = Math.floor(Math.random() * 3) + 1;
+    for (let i = 0; i < regionsToChange; i++) {
+      const region = regions[Math.floor(Math.random() * regions.length)];
+      newWeathers[region] = randomWeather();
+    }
+
+    set({
+      regionWeathers: newWeathers,
+      currentGlobalWeather: randomWeather(),
+      weatherChangeTimer: 300 + Math.floor(Math.random() * 180),
+    });
+  },
+
+  getWeatherByRegion: (region) => {
+    if (region === '全部') return get().currentGlobalWeather;
+    return get().regionWeathers[region] || '晴朗';
+  },
+
+  getWeatherEffect: (weather): WeatherEffect => {
+    const effects: Record<WeatherType, WeatherEffect> = {
+      晴朗: {
+        characterBuff: {},
+        unlockedRegions: [],
+        hiddenStoryBonus: 0,
+        storyUnlockTags: [],
+        explorationModifier: 1,
+      },
+      白雪: {
+        characterBuff: { '人鱼': 20, '精灵': 15, '公主': 10 },
+        unlockedRegions: ['北欧', '俄罗斯'],
+        hiddenStoryBonus: 10,
+        storyUnlockTags: ['冰雪', '雪', '冬日', '寒冷'],
+        explorationModifier: 0.9,
+      },
+      流星雨: {
+        characterBuff: { '巫师': 30, '仙女': 25, '精灵': 20 },
+        unlockedRegions: [],
+        hiddenStoryBonus: 25,
+        storyUnlockTags: ['愿望', '星', '奇迹', '魔法'],
+        explorationModifier: 1.15,
+      },
+      魔法极光: {
+        characterBuff: { '巫师': 25, '精灵': 25, '仙女': 20, '巨龙': 15 },
+        unlockedRegions: ['北欧'],
+        hiddenStoryBonus: 20,
+        storyUnlockTags: ['魔法', '极光', '神秘', '力量'],
+        explorationModifier: 1.2,
+      },
+      糖果风暴: {
+        characterBuff: { '公主': 20, '矮人': 15, '动物': 15 },
+        unlockedRegions: [],
+        hiddenStoryBonus: 5,
+        storyUnlockTags: ['甜蜜', '糖果', '幸福', '快乐'],
+        explorationModifier: 1.1,
+      },
+      花瓣雨: {
+        characterBuff: { '公主': 15, '仙女': 15, '王子': 10 },
+        unlockedRegions: ['日本', '中国'],
+        hiddenStoryBonus: 15,
+        storyUnlockTags: ['爱情', '花', '浪漫', '春天'],
+        explorationModifier: 1.1,
+      },
+      月光夜: {
+        characterBuff: { '女巫': 25, '狼人': 30, '精灵': 20, '动物': 15 },
+        unlockedRegions: ['英国'],
+        hiddenStoryBonus: 25,
+        storyUnlockTags: ['夜晚', '月', '神秘', '变身'],
+        explorationModifier: 1.1,
+      },
+      彩虹桥: {
+        characterBuff: { '仙女': 25, '精灵': 20, '公主': 15, '王子': 15 },
+        unlockedRegions: ['印度', '古希腊'],
+        hiddenStoryBonus: 20,
+        storyUnlockTags: ['仙境', '彩虹', '传说', '神'],
+        explorationModifier: 1.25,
+      },
+    };
+    return effects[weather];
+  },
+
+  getWeatherForecast: (region): WeatherForecast => {
+    const weathers: WeatherType[] = ['晴朗', '白雪', '流星雨', '魔法极光', '糖果风暴', '花瓣雨', '月光夜', '彩虹桥'];
+    const current = region === '全部' ? get().currentGlobalWeather : get().regionWeathers[region];
+    const next = weathers[Math.floor(Math.random() * weathers.length)];
+
+    const hours = ['现在', '1小时后', '3小时后', '6小时后', '12小时后', '明天'];
+    const hourly = hours.map((h, i) => ({
+      time: h,
+      weather: i === 0 ? current : weathers[Math.floor(Math.random() * weathers.length)],
+    }));
+
+    return {
+      region,
+      currentWeather: current,
+      nextWeather: next,
+      nextWeatherIn: get().weatherChangeTimer,
+      hourlyForecast: hourly,
+    };
+  },
+
+  isRegionUnlocked: (region): boolean => {
+    if (region === '全部') return true;
+    const weather = get().regionWeathers[region as Exclude<Region, '全部'>] || '晴朗';
+    const effect = get().getWeatherEffect(weather);
+    if (effect.unlockedRegions.length === 0) return true;
+    return effect.unlockedRegions.includes(region);
+  },
+
+  isStoryWeatherUnlocked: (storyId, storyRegion, storyTags): boolean => {
+    if (get().unlockedWeatherStories.has(storyId)) return true;
+    const weather = get().getWeatherByRegion(storyRegion);
+    const effect = get().getWeatherEffect(weather);
+    if (effect.storyUnlockTags.length === 0) return true;
+    return storyTags.some((tag) => effect.storyUnlockTags.some((unlockTag) => tag.includes(unlockTag) || unlockTag.includes(tag)));
+  },
+
+  unlockWeatherStory: (storyId) => {
+    const current = get().unlockedWeatherStories;
+    const next = new Set(current);
+    next.add(storyId);
+    set({ unlockedWeatherStories: next });
+  },
+
+  getCharacterWeatherBuff: (characterType, weather): number => {
+    const effect = get().getWeatherEffect(weather);
+    return effect.characterBuff[characterType] || 0;
   },
 }));
 

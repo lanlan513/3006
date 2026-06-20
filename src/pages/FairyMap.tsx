@@ -11,10 +11,16 @@ import {
   Compass,
   Star,
   Heart,
+  Lock,
+  Unlock,
+  CloudSun,
+  Info,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import WeatherPanel from '@/components/WeatherPanel';
+import WeatherEffects from '@/components/WeatherEffects';
 import { useStoryStore } from '@/store/storyStore';
-import type { Region } from '@/types';
+import { WEATHER_INFO, type Region, type WeatherType } from '@/types';
 
 interface MapRegion {
   id: Region;
@@ -257,8 +263,26 @@ export default function FairyMap() {
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<Region | null>(null);
   const [activeMeteors, setActiveMeteors] = useState<number[]>([]);
+  const [showWeatherPanel, setShowWeatherPanel] = useState(true);
   const stories = useStoryStore((state) => state.stories);
+  const regionWeathers = useStoryStore((state) => state.regionWeathers);
+  const isRegionUnlocked = useStoryStore((state) => state.isRegionUnlocked);
+  const getWeatherEffect = useStoryStore((state) => state.getWeatherEffect);
+  const advanceWeather = useStoryStore((state) => state.advanceWeather);
+  const weatherChangeTimer = useStoryStore((state) => state.weatherChangeTimer);
+  const setWeatherChangeTimer = useStoryStore.setState;
   const meteorsRef = useRef<Meteor[]>([]);
+
+  const currentViewWeather: WeatherType = useMemo(() => {
+    if (selectedRegion && selectedRegion !== '全部') {
+      return regionWeathers[selectedRegion as Exclude<Region, '全部'>] || '晴朗';
+    }
+    return regionWeathers['北欧'] || '晴朗';
+  }, [selectedRegion, regionWeathers]);
+
+  const isDarkWeather = useMemo(() => {
+    return ['流星雨', '魔法极光', '月光夜'].includes(currentViewWeather);
+  }, [currentViewWeather]);
 
   const STAR_POSITIONS = useMemo(() => generateStars(120), []);
   const METEORS = useMemo(() => generateMeteors(8), []);
@@ -287,6 +311,21 @@ export default function FairyMap() {
     return () => intervals.forEach(clearInterval);
   }, [METEORS]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setWeatherChangeTimer((state) => ({
+        weatherChangeTimer: Math.max(0, state.weatherChangeTimer - 1),
+      }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [setWeatherChangeTimer]);
+
+  useEffect(() => {
+    if (weatherChangeTimer <= 0) {
+      advanceWeather();
+    }
+  }, [weatherChangeTimer, advanceWeather]);
+
   const regionStories = useMemo(() => {
     if (!selectedRegion) return [];
     return stories.filter((s) => s.region === selectedRegion);
@@ -309,9 +348,21 @@ export default function FairyMap() {
   const totalRegions = MAP_REGIONS.length;
   const hotStoriesCount = stories.filter((s) => s.isHot).length;
 
+  const weatherInfo = WEATHER_INFO[currentViewWeather];
+
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e27] via-[#121a4a] to-[#1a1040]" />
+    <div className={`min-h-screen relative overflow-hidden transition-colors duration-1000 ${isDarkWeather ? '' : 'weather-light-mode'}`}>
+      <WeatherEffects weather={currentViewWeather} darkMode={isDarkWeather} intensity="normal" />
+      <div
+        className={`absolute inset-0 transition-all duration-1000 ${
+          isDarkWeather
+            ? 'bg-gradient-to-b from-[#0a0e27] via-[#121a4a] to-[#1a1040]'
+            : `bg-gradient-to-br ${weatherInfo.bgGradient} opacity-60`
+        }`}
+      />
+      {!isDarkWeather && (
+        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/20 to-white/50 pointer-events-none" />
+      )}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute w-full h-full opacity-30"
@@ -368,57 +419,123 @@ export default function FairyMap() {
 
       <Navbar />
 
+      <div className="fixed top-20 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] lg:right-6">
+        <div className="mb-2 flex justify-end">
+          <button
+            onClick={() => setShowWeatherPanel((p) => !p)}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-body backdrop-blur-sm border shadow-lg transition-all ${
+              isDarkWeather
+                ? 'bg-white/10 text-white/80 border-white/20 hover:bg-white/15'
+                : 'bg-white/80 text-gray-700 border-white/50 hover:bg-white'
+            }`}
+            style={!isDarkWeather ? { boxShadow: `0 4px 20px ${weatherInfo.color}40` } : {}}
+          >
+            <span className="text-lg">{weatherInfo.icon}</span>
+            <span>{currentViewWeather}</span>
+            <CloudSun className="w-4 h-4 ml-1" />
+          </button>
+        </div>
+        {showWeatherPanel && (
+          <WeatherPanel
+            region={selectedRegion || '全部'}
+            onClose={() => setShowWeatherPanel(false)}
+            compact={false}
+          />
+        )}
+      </div>
+
       <div className="relative z-10">
         <div className="container mx-auto px-4 pt-6 pb-4">
-          <div className="flex items-center gap-2 text-sm text-white/50 font-body mb-4">
-            <Link to="/" className="flex items-center gap-1 hover:text-white/80 transition-colors">
+          <div className={`flex items-center gap-2 text-sm font-body mb-4 ${isDarkWeather ? 'text-white/50' : 'text-gray-500'}`}>
+            <Link to="/" className={`flex items-center gap-1 transition-colors ${isDarkWeather ? 'hover:text-white/80' : 'hover:text-gray-700'}`}>
               首页
             </Link>
             <span>/</span>
-            <span className="text-white/80">童话地图</span>
+            <span className={isDarkWeather ? 'text-white/80' : 'text-gray-700'}>童话地图</span>
           </div>
         </div>
 
         <div className="text-center mb-6 px-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 shadow-sm mb-4">
-            <Globe className="w-4 h-4 text-fairy-gold animate-twinkle" />
-            <span className="text-sm font-body text-white/70">探索世界童话 · Explore Fairy Tales</span>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm border shadow-sm mb-4 ${
+            isDarkWeather
+              ? 'bg-white/10 border-white/20'
+              : 'bg-white/70 border-white/50'
+          }`}>
+            <Globe className={`w-4 h-4 ${isDarkWeather ? 'text-fairy-gold' : 'text-fairy-purple'} animate-twinkle`} />
+            <span className={`text-sm font-body ${isDarkWeather ? 'text-white/70' : 'text-gray-600'}`}>探索世界童话 · Explore Fairy Tales</span>
+          </div>
+
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-body backdrop-blur-sm border mb-3 ${
+            isDarkWeather
+              ? 'bg-white/5 border-white/10 text-white/60'
+              : 'bg-white/60 border-white/40 text-gray-500'
+          }`}
+          style={!isDarkWeather ? { borderColor: `${weatherInfo.color}40`, background: `${weatherInfo.color}15` } : {}}
+          >
+            <Info className="w-3 h-3" />
+            当前视野天气：<span className="font-medium" style={{ color: isDarkWeather ? weatherInfo.color : undefined }}>{weatherInfo.icon} {currentViewWeather}</span>
+            <span className="mx-1 opacity-40">·</span>
+            {getWeatherEffect(currentViewWeather).hiddenStoryBonus > 0 ? (
+              <span>✨ 隐藏剧情 +{getWeatherEffect(currentViewWeather).hiddenStoryBonus}%</span>
+            ) : (
+              <span>🗺️ 探索率 {Math.round(getWeatherEffect(currentViewWeather).explorationModifier * 100)}%</span>
+            )}
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-fairy mb-3">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300">
+            <span className={`bg-clip-text text-transparent ${
+              isDarkWeather
+                ? 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300'
+                : 'bg-gradient-to-r from-fairy-purple via-fairy-pink to-fairy-gold'
+            }`}>
               童话地图
             </span>
           </h1>
-          <p className="text-base md:text-lg text-white/60 font-body max-w-2xl mx-auto mb-6">
+          <p className={`text-base md:text-lg font-body max-w-2xl mx-auto mb-6 ${
+            isDarkWeather ? 'text-white/60' : 'text-gray-600'
+          }`}>
             穿越七大洲，跨越四大洋，点亮世界每个角落的童话之光
           </p>
 
           <div className="flex flex-wrap justify-center gap-3 md:gap-6">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-              <Compass className="w-4 h-4 text-amber-300" />
-              <span className="text-sm font-body text-white/60">
-                <span className="text-white font-medium">{totalRegions}</span> 个文化地区
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm border ${
+              isDarkWeather ? 'bg-white/5 border-white/10' : 'bg-white/70 border-white/50 shadow-sm'
+            }`}>
+              <Compass className={`w-4 h-4 ${isDarkWeather ? 'text-amber-300' : 'text-amber-500'}`} />
+              <span className={`text-sm font-body ${isDarkWeather ? 'text-white/60' : 'text-gray-500'}`}>
+                <span className={`font-medium ${isDarkWeather ? 'text-white' : 'text-gray-800'}`}>{totalRegions}</span> 个文化地区
               </span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-              <BookOpen className="w-4 h-4 text-rose-300" />
-              <span className="text-sm font-body text-white/60">
-                <span className="text-white font-medium">{totalStories}</span> 篇经典童话
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm border ${
+              isDarkWeather ? 'bg-white/5 border-white/10' : 'bg-white/70 border-white/50 shadow-sm'
+            }`}>
+              <BookOpen className={`w-4 h-4 ${isDarkWeather ? 'text-rose-300' : 'text-rose-500'}`} />
+              <span className={`text-sm font-body ${isDarkWeather ? 'text-white/60' : 'text-gray-500'}`}>
+                <span className={`font-medium ${isDarkWeather ? 'text-white' : 'text-gray-800'}`}>{totalStories}</span> 篇经典童话
               </span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-              <Heart className="w-4 h-4 text-pink-300" />
-              <span className="text-sm font-body text-white/60">
-                <span className="text-white font-medium">{hotStoriesCount}</span> 个热门故事
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm border ${
+              isDarkWeather ? 'bg-white/5 border-white/10' : 'bg-white/70 border-white/50 shadow-sm'
+            }`}>
+              <Heart className={`w-4 h-4 ${isDarkWeather ? 'text-pink-300' : 'text-pink-500'}`} />
+              <span className={`text-sm font-body ${isDarkWeather ? 'text-white/60' : 'text-gray-500'}`}>
+                <span className={`font-medium ${isDarkWeather ? 'text-white' : 'text-gray-800'}`}>{hotStoriesCount}</span> 个热门故事
               </span>
             </div>
           </div>
         </div>
 
         <div className="container mx-auto px-4">
-          <div className="relative rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-sm shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none z-10" style={{ height: '60px' }} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-10" style={{ height: '80px', bottom: 0, top: 'auto' }} />
+          <div className={`relative rounded-3xl overflow-hidden border backdrop-blur-sm shadow-2xl transition-colors duration-500 ${
+            isDarkWeather
+              ? 'border-white/10 bg-white/5'
+              : 'border-white/60 bg-white/40'
+          }`}>
+            <div className={`absolute inset-0 bg-gradient-to-b to-transparent pointer-events-none z-10 ${
+              isDarkWeather ? 'from-white/5' : 'from-white/30'
+            }`} style={{ height: '60px' }} />
+            <div className={`absolute inset-0 bg-gradient-to-t to-transparent pointer-events-none z-10 ${
+              isDarkWeather ? 'from-black/20' : 'from-white/10'
+            }`} style={{ height: '80px', bottom: 0, top: 'auto' }} />
 
             <svg
               viewBox="0 0 1000 500"
@@ -681,21 +798,36 @@ export default function FairyMap() {
               {MAP_REGIONS.map((region) => {
                 const isSelected = selectedRegion === region.id;
                 const isHovered = hoveredRegion === region.id;
+                const regionWeather = regionWeathers[region.id as Exclude<Region, '全部'>] || '晴朗';
+                const weatherInfo = WEATHER_INFO[regionWeather];
+                const unlocked = isRegionUnlocked(region.id);
 
                 return (
                   <g
                     key={region.id}
-                    className="cursor-pointer"
-                    onClick={() => handleRegionClick(region.id)}
+                    className={`${unlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                    onClick={() => unlocked && handleRegionClick(region.id)}
                     onMouseEnter={() => setHoveredRegion(region.id)}
                     onMouseLeave={() => setHoveredRegion(null)}
                   >
+                    {!unlocked && (
+                      <circle
+                        cx={region.x}
+                        cy={region.y}
+                        r={35}
+                        fill="rgba(0,0,0,0.3)"
+                        stroke="rgba(255,100,100,0.5)"
+                        strokeWidth="1"
+                        strokeDasharray="4 4"
+                      />
+                    )}
+
                     <circle
                       cx={region.x}
                       cy={region.y}
                       r={isSelected ? 60 : isHovered ? 50 : 38}
                       fill={`url(#glow-${region.id})`}
-                      opacity={isSelected ? 1 : isHovered ? 0.85 : 0.55}
+                      opacity={unlocked ? (isSelected ? 1 : isHovered ? 0.85 : 0.55) : 0.25}
                     >
                       <animate
                         attributeName="r"
@@ -709,9 +841,9 @@ export default function FairyMap() {
                       cx={region.x}
                       cy={region.y}
                       r={isSelected ? 16 : isHovered ? 13 : 10}
-                      fill={region.color}
+                      fill={unlocked ? region.color : '#666'}
                       filter="url(#glow)"
-                      opacity={isSelected ? 1 : isHovered ? 0.92 : 0.75}
+                      opacity={unlocked ? (isSelected ? 1 : isHovered ? 0.92 : 0.75) : 0.4}
                     >
                       <animate
                         attributeName="r"
@@ -726,7 +858,7 @@ export default function FairyMap() {
                       cy={region.y}
                       r={4}
                       fill="white"
-                      opacity="0.95"
+                      opacity={unlocked ? 0.95 : 0.5}
                     />
 
                     <text
@@ -734,33 +866,50 @@ export default function FairyMap() {
                       y={region.y + 2}
                       textAnchor="middle"
                       fontSize="8"
-                      opacity={isSelected || isHovered ? 1 : 0.8}
+                      opacity={unlocked ? (isSelected || isHovered ? 1 : 0.8) : 0.4}
                     >
-                      {region.icon}
+                      {unlocked ? region.icon : '🔒'}
                     </text>
+
+                    <g transform={`translate(${region.x + 18}, ${region.y - 18})`}>
+                      <circle
+                        r="10"
+                        fill={isDarkWeather ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,1)'}
+                        stroke={weatherInfo.color}
+                        strokeWidth="1"
+                        opacity={unlocked ? 1 : 0.5}
+                      />
+                      <text
+                        y="3.5"
+                        textAnchor="middle"
+                        fontSize="10"
+                      >
+                        {weatherInfo.icon}
+                      </text>
+                    </g>
 
                     <text
                       x={region.x}
                       y={region.y - 28}
                       textAnchor="middle"
                       className="font-body"
-                      fill={region.color}
+                      fill={unlocked ? region.color : 'rgba(150,150,150,0.8)'}
                       fontSize="13"
                       fontWeight="600"
-                      opacity={isSelected || isHovered ? 1 : 0.85}
-                      filter="url(#glow)"
+                      opacity={unlocked ? (isSelected || isHovered ? 1 : 0.85) : 0.6}
+                      filter={unlocked ? 'url(#glow)' : undefined}
                     >
                       {region.name}
                     </text>
 
-                    {(isSelected || isHovered) && (
+                    {(isSelected || isHovered) && unlocked && (
                       <>
                         <text
                           x={region.x}
                           y={region.y + 36}
                           textAnchor="middle"
                           className="font-body"
-                          fill="rgba(255, 255, 255, 0.55)"
+                          fill={isDarkWeather ? 'rgba(255, 255, 255, 0.55)' : 'rgba(80, 80, 80, 0.7)'}
                           fontSize="10"
                         >
                           {region.nameEn}
@@ -770,15 +919,40 @@ export default function FairyMap() {
                           y={region.y + 50}
                           textAnchor="middle"
                           className="font-body"
-                          fill="rgba(255, 255, 255, 0.35)"
+                          fill={isDarkWeather ? 'rgba(255, 255, 255, 0.5)' : 'rgba(100, 100, 100, 0.6)'}
                           fontSize="9"
                         >
                           {stories.filter((s) => s.region === region.id).length} 篇故事
                         </text>
+                        <text
+                          x={region.x}
+                          y={region.y + 64}
+                          textAnchor="middle"
+                          className="font-body"
+                          fill={weatherInfo.color}
+                          fontSize="8.5"
+                          fontWeight="500"
+                        >
+                          {weatherInfo.icon} {regionWeather}
+                        </text>
                       </>
                     )}
 
-                    {isSelected && (
+                    {(isSelected || isHovered) && !unlocked && (
+                      <text
+                        x={region.x}
+                        y={region.y + 40}
+                        textAnchor="middle"
+                        className="font-body"
+                        fill="rgba(255, 120, 120, 0.8)"
+                        fontSize="10"
+                        fontWeight="500"
+                      >
+                        🔒 需特定天气解锁
+                      </text>
+                    )}
+
+                    {isSelected && unlocked && (
                       <>
                         <circle
                           cx={region.x}
@@ -857,7 +1031,7 @@ export default function FairyMap() {
                   x="0"
                   y="0"
                   textAnchor="end"
-                  fill="rgba(255,255,255,0.25)"
+                  fill={isDarkWeather ? 'rgba(255,255,255,0.25)' : 'rgba(100,100,100,0.4)'}
                   fontSize="10"
                   className="font-body"
                 >
@@ -873,19 +1047,32 @@ export default function FairyMap() {
             <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 z-20 max-w-[calc(100%-120px)]">
               {MAP_REGIONS.map((region) => {
                 const count = stories.filter((s) => s.region === region.id).length;
+                const regionWeather = regionWeathers[region.id as Exclude<Region, '全部'>] || '晴朗';
+                const rWeatherInfo = WEATHER_INFO[regionWeather];
+                const unlocked = isRegionUnlocked(region.id);
                 return (
                   <button
                     key={region.id}
-                    onClick={() => handleRegionClick(region.id)}
+                    onClick={() => unlocked && handleRegionClick(region.id)}
+                    disabled={!unlocked}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body transition-all duration-300 border backdrop-blur-sm ${
                       selectedRegion === region.id
-                        ? 'bg-white/20 border-white/30 text-white shadow-lg scale-105'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/85 hover:scale-105'
+                        ? isDarkWeather
+                          ? 'bg-white/20 border-white/30 text-white shadow-lg scale-105'
+                          : 'bg-white border-fairy-purple/30 text-fairy-purple shadow-lg scale-105'
+                        : unlocked
+                        ? isDarkWeather
+                          ? 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/85 hover:scale-105'
+                          : 'bg-white/60 border-gray-200/60 text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-105'
+                        : isDarkWeather
+                        ? 'bg-red-500/10 border-red-400/30 text-red-300/70 cursor-not-allowed'
+                        : 'bg-red-50 border-red-200/50 text-red-500/80 cursor-not-allowed'
                     }`}
                     style={selectedRegion === region.id ? { boxShadow: `0 0 20px ${region.glowColor}` } : {}}
                   >
-                    <span>{region.icon}</span>
+                    <span>{unlocked ? region.icon : '🔒'}</span>
                     <span>{region.name}</span>
+                    <span className="opacity-60">{rWeatherInfo.icon}</span>
                     <span className="opacity-60">·{count}</span>
                   </button>
                 );
@@ -893,14 +1080,22 @@ export default function FairyMap() {
             </div>
 
             <div className="absolute top-4 right-4 z-20">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body bg-white/5 border border-white/10 text-white/40 backdrop-blur-sm">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body backdrop-blur-sm border ${
+                isDarkWeather
+                  ? 'bg-white/5 border-white/10 text-white/40'
+                  : 'bg-white/70 border-white/50 text-gray-500 shadow-sm'
+              }`}>
                 <MapPin className="w-3 h-3" />
                 点击光点探索故事
               </span>
             </div>
 
             <div className="absolute top-4 left-4 z-20 hidden md:block">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-300/20 text-amber-200/70 backdrop-blur-sm">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body backdrop-blur-sm border ${
+                isDarkWeather
+                  ? 'bg-gradient-to-r from-amber-500/20 to-rose-500/20 border-amber-300/20 text-amber-200/70'
+                  : 'bg-gradient-to-r from-amber-50 to-rose-50 border-amber-200/50 text-amber-700 shadow-sm'
+              }`}>
                 <Star className="w-3 h-3 animate-twinkle" />
                 当流星划过，许个愿望吧
               </span>
@@ -911,7 +1106,11 @@ export default function FairyMap() {
         {selectedRegion && selectedRegionData && (
           <div className="container mx-auto px-4 mt-6 pb-12">
             <div
-              className="relative rounded-3xl overflow-hidden border border-white/10 bg-white/[0.07] backdrop-blur-md shadow-2xl"
+              className={`relative rounded-3xl overflow-hidden border backdrop-blur-md shadow-2xl ${
+                isDarkWeather
+                  ? 'border-white/10 bg-white/[0.07]'
+                  : 'border-white/70 bg-white/80'
+              }`}
               style={{
                 animation: 'fadeInUp 0.5s ease-out',
               }}
@@ -944,11 +1143,15 @@ export default function FairyMap() {
                       />
                     </div>
                     <div>
-                      <h2 className="text-2xl md:text-3xl font-fairy text-white flex items-center gap-2">
+                      <h2 className={`text-2xl md:text-3xl font-fairy flex items-center gap-2 ${
+                        isDarkWeather ? 'text-white' : 'text-gray-800'
+                      }`}>
                         {selectedRegionData.name}童话
                         <Sparkles className="w-5 h-5 animate-twinkle" style={{ color: selectedRegionData.color }} />
                       </h2>
-                      <p className="text-sm text-white/50 font-body mt-0.5">
+                      <p className={`text-sm font-body mt-0.5 ${
+                        isDarkWeather ? 'text-white/50' : 'text-gray-500'
+                      }`}>
                         {selectedRegionData.nameEn} Fairy Tales
                       </p>
                     </div>
@@ -967,31 +1170,60 @@ export default function FairyMap() {
                     </span>
                     <button
                       onClick={handleClose}
-                      className="w-9 h-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-all duration-200"
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        isDarkWeather
+                          ? 'bg-white/10 hover:bg-white/20 text-white/60 hover:text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                      }`}
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="px-6 pb-2">
-                  <p className="text-white/55 font-body text-sm leading-relaxed max-w-2xl">
+                <div className="px-6 pb-2 flex flex-wrap items-center gap-2">
+                  <p className={`font-body text-sm leading-relaxed max-w-2xl flex-1 ${
+                    isDarkWeather ? 'text-white/55' : 'text-gray-600'
+                  }`}>
                     {selectedRegionData.description}
                   </p>
+                  {(() => {
+                    const regionWeather = regionWeathers[selectedRegion as Exclude<Region, '全部'>] || '晴朗';
+                    const rWeatherInfo = WEATHER_INFO[regionWeather];
+                    const effect = getWeatherEffect(regionWeather);
+                    return (
+                      <div
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body backdrop-blur-sm"
+                        style={{
+                          backgroundColor: `${rWeatherInfo.color}20`,
+                          border: `1px solid ${rWeatherInfo.color}40`,
+                          color: isDarkWeather ? rWeatherInfo.color : undefined,
+                        }}
+                      >
+                        <span>{rWeatherInfo.icon}</span>
+                        <span className={isDarkWeather ? '' : 'text-gray-700'}>{regionWeather}</span>
+                        {effect.hiddenStoryBonus > 0 && (
+                          <span className={isDarkWeather ? 'text-white/60' : 'text-gray-500'}>
+                            · 隐藏+{effect.hiddenStoryBonus}%
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="px-6 pb-6 pt-4">
                   {regionStories.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                      {regionStories.map((story) => (
-                        <div
-                          key={story.id}
-                          className="group relative rounded-2xl overflow-hidden bg-white/[0.08] border border-white/10 hover:border-white/20 hover:bg-white/[0.12] transition-all duration-300 hover:-translate-y-1"
-                          style={{
-                            animation: 'fadeInUp 0.4s ease-out backwards',
-                          }}
-                        >
-                          <Link to={`/stories/${story.id}`}>
+                      {regionStories.map((story) => {
+                        const regionWeather = regionWeathers[selectedRegion as Exclude<Region, '全部'>] || '晴朗';
+                        const storyUnlocked = useStoryStore.getState().isStoryWeatherUnlocked(
+                          story.id,
+                          story.region as Region,
+                          story.tags
+                        );
+                        const cardContent = (
+                          <>
                             <div className="relative h-40 overflow-hidden">
                               <div
                                 className="absolute inset-0"
@@ -1000,10 +1232,18 @@ export default function FairyMap() {
                               <img
                                 src={story.coverImage}
                                 alt={story.title}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                className={`w-full h-full object-cover transition-transform duration-500 ${storyUnlocked ? 'group-hover:scale-110' : 'grayscale-[30%]'}`}
                                 loading="lazy"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                              {!storyUnlocked && (
+                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                  <div className="text-center">
+                                    <Lock className="w-8 h-8 text-white/70 mx-auto mb-1" />
+                                    <p className="text-xs text-white/80 font-body">特定天气解锁</p>
+                                  </div>
+                                </div>
+                              )}
                               {story.isHot && (
                                 <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-lg">
                                   <Sparkles className="w-3 h-3" />
@@ -1020,14 +1260,18 @@ export default function FairyMap() {
                               </div>
                             </div>
                             <div className="p-3">
-                              <p className="text-xs text-white/55 font-body line-clamp-2 mb-3 leading-relaxed">
+                              <p className={`text-xs font-body line-clamp-2 mb-3 leading-relaxed ${
+                                isDarkWeather ? 'text-white/55' : 'text-gray-500'
+                              }`}>
                                 {story.summary}
                               </p>
                               <div className="flex flex-wrap gap-1.5">
                                 {story.tags.slice(0, 3).map((tag) => (
                                   <span
                                     key={tag}
-                                    className="px-2 py-0.5 rounded-full text-[10px] font-body text-white/75 backdrop-blur-sm"
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-body backdrop-blur-sm ${
+                                      isDarkWeather ? 'text-white/75' : 'text-gray-600'
+                                    }`}
                                     style={{
                                       backgroundColor: `${selectedRegionData.color}30`,
                                       border: `1px solid ${selectedRegionData.color}30`,
@@ -1038,24 +1282,54 @@ export default function FairyMap() {
                                 ))}
                               </div>
                             </div>
-                          </Link>
+                          </>
+                        );
+                        return (
+                        <div
+                          key={story.id}
+                          className={`group relative rounded-2xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 ${
+                            isDarkWeather
+                              ? 'bg-white/[0.08] border-white/10 hover:border-white/20 hover:bg-white/[0.12]'
+                              : 'bg-white/90 border-gray-100 hover:border-gray-200 hover:shadow-lg'
+                          } ${!storyUnlocked ? 'opacity-70' : ''}`}
+                          style={{
+                            animation: 'fadeInUp 0.4s ease-out backwards',
+                          }}
+                        >
+                          {storyUnlocked ? (
+                            <Link to={`/stories/${story.id}`}>{cardContent}</Link>
+                          ) : (
+                            <div className="cursor-not-allowed">{cardContent}</div>
+                          )}
                         </div>
-                      ))}
+                      );})}
                     </div>
                   ) : (
                     <div className="text-center py-16">
-                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
-                        <BookOpen className="w-10 h-10 text-white/30" />
+                      <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                        isDarkWeather ? 'bg-white/10' : 'bg-gray-100'
+                      }`}>
+                        <BookOpen className={`w-10 h-10 ${
+                          isDarkWeather ? 'text-white/30' : 'text-gray-300'
+                        }`} />
                       </div>
-                      <p className="text-white/40 font-body mb-2">暂无该地区的童话故事</p>
-                      <p className="text-white/25 font-body text-sm">敬请期待更多精彩故事...</p>
+                      <p className={`font-body mb-2 ${
+                        isDarkWeather ? 'text-white/40' : 'text-gray-500'
+                      }`}>暂无该地区的童话故事</p>
+                      <p className={`font-body text-sm ${
+                        isDarkWeather ? 'text-white/25' : 'text-gray-400'
+                      }`}>敬请期待更多精彩故事...</p>
                     </div>
                   )}
 
                   <div className="mt-8 text-center">
                     <Link
                       to="/stories"
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-body text-sm text-white/80 bg-white/10 border border-white/15 hover:bg-white/15 hover:text-white transition-all duration-300 backdrop-blur-sm hover:scale-105"
+                      className={`inline-flex items-center gap-2 px-6 py-3 rounded-full font-body text-sm transition-all duration-300 backdrop-blur-sm hover:scale-105 ${
+                        isDarkWeather
+                          ? 'text-white/80 bg-white/10 border border-white/15 hover:bg-white/15 hover:text-white'
+                          : 'text-gray-600 bg-white/70 border border-gray-200 hover:bg-white hover:text-gray-800 shadow-sm'
+                      }`}
                     >
                       浏览全部故事书架
                       <ChevronRight className="w-4 h-4" />
@@ -1070,18 +1344,32 @@ export default function FairyMap() {
         {!selectedRegion && (
           <div className="container mx-auto px-4 mt-8 pb-12">
             <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-fairy text-white/90 mb-2">选择一个地区开始探索</h2>
-              <p className="text-white/50 font-body">每一个光点，都藏着无数动人的故事</p>
+              <h2 className={`text-2xl md:text-3xl font-fairy mb-2 ${
+                isDarkWeather ? 'text-white/90' : 'text-gray-800'
+              }`}>选择一个地区开始探索</h2>
+              <p className={`font-body ${
+                isDarkWeather ? 'text-white/50' : 'text-gray-500'
+              }`}>每一个光点，都藏着无数动人的故事</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {MAP_REGIONS.map((region) => {
                 const count = stories.filter((s) => s.region === region.id).length;
                 const regionHotCount = stories.filter((s) => s.region === region.id && s.isHot).length;
+                const regionWeather = regionWeathers[region.id as Exclude<Region, '全部'>] || '晴朗';
+                const rWeatherInfo = WEATHER_INFO[regionWeather];
+                const unlocked = isRegionUnlocked(region.id);
                 return (
                   <button
                     key={region.id}
-                    onClick={() => handleRegionClick(region.id)}
-                    className="group relative rounded-2xl overflow-hidden bg-white/[0.06] border border-white/10 hover:border-white/20 p-5 text-left transition-all duration-300 hover:-translate-y-1.5 hover:bg-white/[0.1]"
+                    onClick={() => unlocked && handleRegionClick(region.id)}
+                    disabled={!unlocked}
+                    className={`group relative rounded-2xl overflow-hidden p-5 text-left transition-all duration-300 ${
+                      unlocked ? 'hover:-translate-y-1.5' : 'opacity-60 cursor-not-allowed'
+                    } ${
+                      isDarkWeather
+                        ? 'bg-white/[0.06] border border-white/10 hover:border-white/20 hover:bg-white/[0.1]'
+                        : 'bg-white/80 border border-gray-100 hover:border-gray-200 hover:shadow-md'
+                    }`}
                     style={{
                       animation: 'fadeInUp 0.5s ease-out backwards',
                     }}
@@ -1091,32 +1379,63 @@ export default function FairyMap() {
                       style={{ background: `linear-gradient(90deg, ${region.color}, transparent)` }}
                     />
                     <div className="flex items-start justify-between mb-3">
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl relative overflow-hidden"
-                        style={{
-                          backgroundColor: `${region.color}20`,
-                          border: `1px solid ${region.color}40`,
-                        }}
-                      >
-                        {region.icon}
+                      <div className="flex items-start gap-2">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl relative overflow-hidden"
+                          style={{
+                            backgroundColor: `${region.color}20`,
+                            border: `1px solid ${region.color}40`,
+                          }}
+                        >
+                          {unlocked ? region.icon : '🔒'}
+                        </div>
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-sm"
+                          style={{
+                            backgroundColor: rWeatherInfo.color + '30',
+                            border: `1px solid ${rWeatherInfo.color}50`,
+                          }}
+                          title={regionWeather}
+                        >
+                          {rWeatherInfo.icon}
+                        </div>
                       </div>
                       {regionHotCount > 0 && (
-                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200/80">
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${
+                          isDarkWeather
+                            ? 'bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200/80'
+                            : 'bg-gradient-to-r from-amber-50 to-rose-50 text-amber-700 border border-amber-200'
+                        }`}>
                           <Sparkles className="w-2.5 h-2.5" />
                           {regionHotCount}热
                         </div>
                       )}
                     </div>
-                    <h3 className="font-fairy text-xl text-white mb-0.5">{region.name}</h3>
-                    <p className="text-xs text-white/40 font-body mb-2.5">{region.nameEn}</p>
-                    <p className="text-xs text-white/55 font-body line-clamp-2 mb-4 leading-relaxed min-h-[32px]">
+                    <h3 className={`font-fairy text-xl mb-0.5 ${
+                      isDarkWeather ? 'text-white' : 'text-gray-800'
+                    }`}>{region.name}</h3>
+                    <p className={`text-xs font-body mb-2.5 ${
+                      isDarkWeather ? 'text-white/40' : 'text-gray-400'
+                    }`}>{region.nameEn}</p>
+                    <p className={`text-xs font-body line-clamp-2 mb-4 leading-relaxed min-h-[32px] ${
+                      isDarkWeather ? 'text-white/55' : 'text-gray-500'
+                    }`}>
                       {region.description}
+                      {!unlocked && (
+                        <span className="block mt-1 text-red-400">🔒 需要特定天气解锁</span>
+                      )}
                     </p>
-                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                    <div className={`flex items-center justify-between pt-3 border-t ${
+                      isDarkWeather ? 'border-white/5' : 'border-gray-100'
+                    }`}>
                       <span className="text-sm font-body" style={{ color: region.color }}>
                         {count} 篇故事
                       </span>
-                      <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-white/70 group-hover:translate-x-1 transition-all" />
+                      <ArrowRight className={`w-4 h-4 transition-all ${
+                        isDarkWeather
+                          ? 'text-white/30 group-hover:text-white/70 group-hover:translate-x-1'
+                          : 'text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1'
+                      } ${!unlocked ? 'opacity-30' : ''}`} />
                     </div>
                   </button>
                 );

@@ -13,6 +13,7 @@ export type CharacterType =
   | '人鱼'
   | '猎人'
   | '仙女'
+  | '狼人'
   | '其他';
 
 export const CHARACTER_TYPES: CharacterType[] = [
@@ -30,6 +31,7 @@ export const CHARACTER_TYPES: CharacterType[] = [
   '人鱼',
   '猎人',
   '仙女',
+  '狼人',
   '其他',
 ];
 
@@ -339,4 +341,117 @@ export interface Creature {
   lifespan: string;
   size: string;
   rarity: '普通' | '稀有' | '史诗' | '传说' | '神话';
+}
+
+export type WeatherType =
+  | '晴朗'
+  | '白雪'
+  | '流星雨'
+  | '魔法极光'
+  | '糖果风暴'
+  | '花瓣雨'
+  | '月光夜'
+  | '彩虹桥';
+
+export const WEATHER_TYPES: WeatherType[] = [
+  '晴朗',
+  '白雪',
+  '流星雨',
+  '魔法极光',
+  '糖果风暴',
+  '花瓣雨',
+  '月光夜',
+  '彩虹桥',
+];
+
+export interface WeatherInfo {
+  type: WeatherType;
+  icon: string;
+  description: string;
+  color: string;
+  bgGradient: string;
+  effects: string[];
+}
+
+export const WEATHER_INFO: Record<WeatherType, WeatherInfo> = {
+  晴朗: {
+    type: '晴朗',
+    icon: '☀️',
+    description: '阳光明媚，万物复苏，所有角色状态最佳',
+    color: '#FFD700',
+    bgGradient: 'from-amber-200 via-yellow-100 to-orange-200',
+    effects: ['角色心情+10%', '探索范围正常', '故事灵感+5%'],
+  },
+  白雪: {
+    type: '白雪',
+    icon: '❄️',
+    description: '皑皑白雪覆盖大地，冰雪奇缘悄然上演',
+    color: '#B0E0E6',
+    bgGradient: 'from-blue-100 via-slate-100 to-indigo-100',
+    effects: ['冰雪角色强化+20%', '北部地区解锁', '隐藏雪之故事可触发'],
+  },
+  流星雨: {
+    type: '流星雨',
+    icon: '🌠',
+    description: '流星划过夜空，许下愿望吧！奇迹即将发生',
+    color: '#9370DB',
+    bgGradient: 'from-indigo-900 via-purple-900 to-slate-900',
+    effects: ['愿望成功率+30%', '隐藏剧情触发+25%', '稀有道具出现率+15%'],
+  },
+  魔法极光: {
+    type: '魔法极光',
+    icon: '🌌',
+    description: '绚丽极光舞动天际，魔法能量充盈世界',
+    color: '#7FFFD4',
+    bgGradient: 'from-emerald-900 via-teal-800 to-purple-900',
+    effects: ['魔法角色强化+25%', '魔法道具效果+20%', '极光地区故事解锁'],
+  },
+  糖果风暴: {
+    type: '糖果风暴',
+    icon: '🍬',
+    description: '甜蜜糖果从天而降，空气中弥漫幸福的味道',
+    color: '#FFB6C1',
+    bgGradient: 'from-pink-200 via-rose-100 to-fuchsia-200',
+    effects: ['全体角色心情+20%', '甜蜜故事章节解锁', '能量恢复速度+30%'],
+  },
+  花瓣雨: {
+    type: '花瓣雨',
+    icon: '🌸',
+    description: '缤纷花瓣随风飘落，浪漫气息弥漫',
+    color: '#FFC0CB',
+    bgGradient: 'from-pink-100 via-rose-50 to-red-100',
+    effects: ['爱情故事触发+30%', '女性角色强化+15%', '东方地区故事加成'],
+  },
+  月光夜: {
+    type: '月光夜',
+    icon: '🌙',
+    description: '皎洁月光倾泻而下，神秘生物悄然苏醒',
+    color: '#C0C0C0',
+    bgGradient: 'from-slate-800 via-blue-900 to-indigo-950',
+    effects: ['夜间生物觉醒', '神秘故事解锁+25%', '狼人/精灵强化+20%'],
+  },
+  彩虹桥: {
+    type: '彩虹桥',
+    icon: '🌈',
+    description: '七彩彩虹连接天地，通往仙境的桥梁显现',
+    color: '#FF69B4',
+    bgGradient: 'from-red-200 via-yellow-100 to-purple-200',
+    effects: ['仙境地区可进入', '所有属性+10%', '传说故事触发率+20%'],
+  },
+};
+
+export interface WeatherForecast {
+  region: Region;
+  currentWeather: WeatherType;
+  nextWeather: WeatherType;
+  nextWeatherIn: number;
+  hourlyForecast: { time: string; weather: WeatherType }[];
+}
+
+export interface WeatherEffect {
+  characterBuff: Partial<Record<CharacterType, number>>;
+  unlockedRegions: Region[];
+  hiddenStoryBonus: number;
+  storyUnlockTags: string[];
+  explorationModifier: number;
 }

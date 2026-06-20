@@ -23,6 +23,9 @@ import {
   Route,
   Trophy,
   X,
+  CloudSun,
+  Zap,
+  Lock,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import StoryCard from '@/components/StoryCard';
@@ -30,13 +33,19 @@ import CharacterCard from '@/components/CharacterCard';
 import FloatingDecorations from '@/components/FloatingDecorations';
 import StoryTree from '@/components/StoryTree';
 import EndingPathViewer from '@/components/EndingPathViewer';
+import WeatherPanel from '@/components/WeatherPanel';
+import WeatherEffects from '@/components/WeatherEffects';
 import {
   useStoryStore,
   getStoryById,
   getCharactersByStoryId,
   getInteractiveStoryByStoryId,
 } from '@/store/storyStore';
-import type { StoryNode, EndingType, EndingRoute, EndingPathStep, StoryNodeType } from '@/types';
+import { WEATHER_INFO } from '@/types';
+import type {
+  StoryNode, EndingType, EndingRoute, EndingPathStep, StoryNodeType,
+  Region, WeatherType, CharacterType
+} from '@/types';
 
 type ReadingMode = 'classic' | 'interactive';
 
@@ -126,6 +135,11 @@ export default function StoryDetail() {
   const addVisitedNode = useStoryStore((state) => state.addVisitedNode);
   const addDiscoveredEnding = useStoryStore((state) => state.addDiscoveredEnding);
   const resetStoryProgress = useStoryStore((state) => state.resetStoryProgress);
+  const regionWeathers = useStoryStore((state) => state.regionWeathers);
+  const getWeatherEffect = useStoryStore((state) => state.getWeatherEffect);
+  const isStoryWeatherUnlocked = useStoryStore((state) => state.isStoryWeatherUnlocked);
+  const getCharacterWeatherBuff = useStoryStore((state) => state.getCharacterWeatherBuff);
+  const getWeatherByRegion = useStoryStore((state) => state.getWeatherByRegion);
 
   const story = useMemo(() => getStoryById(stories, id || ''), [stories, id]);
   const interactiveStory = useMemo(
@@ -415,13 +429,154 @@ export default function StoryDetail() {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-4">
                   {story.tags.map((tag) => (
                     <span key={tag} className="fairy-tag">
                       {tag}
                     </span>
                   ))}
                 </div>
+
+                {(() => {
+                  const storyRegion = story.region as Exclude<Region, '全部'>;
+                  const currentWeather = getWeatherByRegion(storyRegion);
+                  const weatherInfo = (WEATHER_INFO as any)[currentWeather];
+                  const weatherEffect = getWeatherEffect(currentWeather);
+                  const storyUnlockedByWeather = isStoryWeatherUnlocked(story.id, story.region as Region, story.tags);
+                  const isDarkWeather = currentWeather === '流星雨' || currentWeather === '魔法极光' || currentWeather === '月光夜';
+
+                  return (
+                    <div
+                      className={`mb-6 rounded-2xl overflow-hidden border-2 backdrop-blur-sm relative ${
+                        isDarkWeather
+                          ? 'border-indigo-400/40 bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-slate-900/30'
+                          : 'bg-gradient-to-r'
+                      } ${weatherInfo?.bgGradient?.split(' ').map((g: string) => g).join(' ') || ''} ${
+                        !isDarkWeather ? 'border-white/70' : ''
+                      }`}
+                      style={{
+                        borderColor: !isDarkWeather ? `${weatherInfo?.color}50` : undefined,
+                      }}
+                    >
+                      <WeatherEffects weather={currentWeather} intensity="light" darkMode={isDarkWeather} />
+                      <div className="relative z-10 p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            <div
+                              className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-lg animate-twinkle"
+                              style={{
+                                backgroundColor: `${weatherInfo?.color}30`,
+                                border: `2px solid ${weatherInfo?.color}80`,
+                              }}
+                            >
+                              {weatherInfo?.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <h3 className={`font-fairy text-xl ${
+                                  isDarkWeather ? 'text-white' : 'text-gray-800'
+                                }`}>
+                                  {story.region} · 当前天气
+                                </h3>
+                                <span
+                                  className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-sm font-body font-semibold"
+                                  style={{
+                                    backgroundColor: `${weatherInfo?.color}30`,
+                                    color: weatherInfo?.color,
+                                    border: `1px solid ${weatherInfo?.color}60`,
+                                  }}
+                                >
+                                  {currentWeather}
+                                </span>
+                                {!storyUnlockedByWeather && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-body bg-red-500/20 text-red-400 border border-red-400/40">
+                                    <Lock className="w-3 h-3" />
+                                    需特定天气解锁
+                                  </span>
+                                )}
+                              </div>
+                              <p className={`text-sm font-body ${
+                                isDarkWeather ? 'text-white/70' : 'text-gray-600'
+                              }`}>
+                                {weatherInfo?.description}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto">
+                            {weatherEffect.explorationModifier !== 1 && (
+                              <div className={`px-3 py-2 rounded-xl text-center text-xs font-body ${
+                                isDarkWeather ? 'bg-white/10 text-white/80' : 'bg-white/60 text-gray-700'
+                              }`}>
+                                <div className="font-bold text-base mb-0.5" style={{ color: weatherInfo?.color }}>
+                                  {weatherEffect.explorationModifier > 1 ? '+' : ''}{Math.round((weatherEffect.explorationModifier - 1) * 100)}%
+                                </div>
+                                <div className="opacity-80">探索率</div>
+                              </div>
+                            )}
+                            {weatherEffect.hiddenStoryBonus > 0 && (
+                              <div className={`px-3 py-2 rounded-xl text-center text-xs font-body ${
+                                isDarkWeather ? 'bg-white/10 text-white/80' : 'bg-white/60 text-gray-700'
+                              }`}>
+                                <div className="font-bold text-base mb-0.5 text-amber-500">
+                                  +{weatherEffect.hiddenStoryBonus}%
+                                </div>
+                                <div className="opacity-80">隐藏剧情</div>
+                              </div>
+                            )}
+                            {Object.keys(weatherEffect.characterBuff).length > 0 && (
+                              <div className={`px-3 py-2 rounded-xl text-center text-xs font-body ${
+                                isDarkWeather ? 'bg-white/10 text-white/80' : 'bg-white/60 text-gray-700'
+                              }`}>
+                                <div className="font-bold text-base mb-0.5 text-fairy-purple flex items-center justify-center gap-1">
+                                  <Zap className="w-3 h-3" />
+                                  {Object.values(weatherEffect.characterBuff).reduce((a, b) => a + b, 0) > 0 ? '强化中' : '有加成'}
+                                </div>
+                                <div className="opacity-80 truncate max-w-[100px]">
+                                  {Object.keys(weatherEffect.characterBuff).slice(0, 2).join('/')}
+                                </div>
+                              </div>
+                            )}
+                            <div className={`px-3 py-2 rounded-xl text-center text-xs font-body ${
+                              isDarkWeather ? 'bg-white/10 text-white/80' : 'bg-white/60 text-gray-700'
+                            }`}>
+                              <div className="font-bold text-base mb-0.5 flex items-center justify-center gap-1" style={{ color: weatherInfo?.color }}>
+                                <CloudSun className="w-4 h-4" />
+                                {weatherInfo?.effects?.length || 0}
+                              </div>
+                              <div className="opacity-80">天气效果</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {weatherInfo?.effects && weatherInfo.effects.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-dashed" style={{ borderColor: isDarkWeather ? 'rgba(255,255,255,0.15)' : `${weatherInfo?.color}30` }}>
+                            <div className="flex flex-wrap gap-2">
+                              {weatherInfo.effects.map((effect: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-body ${
+                                    isDarkWeather ? 'bg-white/10 text-white/75' : 'bg-white/70 text-gray-600'
+                                  }`}
+                                >
+                                  <Sparkles className="w-3 h-3" style={{ color: weatherInfo?.color }} />
+                                  {effect}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {!storyUnlockedByWeather && weatherEffect.storyUnlockTags && weatherEffect.storyUnlockTags.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-dashed border-red-400/30">
+                            <div className={`text-xs font-body mb-2 ${isDarkWeather ? 'text-red-300/80' : 'text-red-600'}`}>
+                              💡 解锁提示：当前天气的匹配标签为「{weatherEffect.storyUnlockTags.join('、')}」，故事标签「{story.tags.join('、')}」暂未触发解锁条件
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <p className="text-gray-600 font-body leading-relaxed mb-6">{story.summary}</p>
 
@@ -714,7 +869,7 @@ export default function StoryDetail() {
 
           {storyCharacters.length > 0 && (
             <div className="mt-16 mb-8">
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-rainbow flex items-center justify-center">
                   <Users className="w-6 h-6 text-white" />
                 </div>
@@ -722,11 +877,54 @@ export default function StoryDetail() {
                   <h2 className="text-2xl font-fairy text-gray-800">故事角色</h2>
                   <p className="text-sm text-gray-500 font-body">《{story.title}》中的精彩角色</p>
                 </div>
+                {(() => {
+                  const storyRegion = story.region as Exclude<Region, '全部'>;
+                  const currentWeather = getWeatherByRegion(storyRegion);
+                  const weatherInfo = (WEATHER_INFO as any)[currentWeather];
+                  const hasAnyBuff = storyCharacters.some((c) => {
+                    const buff = getCharacterWeatherBuff(c.type as any, currentWeather);
+                    return buff > 0;
+                  });
+                  if (!hasAnyBuff) return null;
+                  return (
+                    <div
+                      className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body backdrop-blur-sm"
+                      style={{
+                        backgroundColor: `${weatherInfo?.color}20`,
+                        border: `1px solid ${weatherInfo?.color}40`,
+                        color: weatherInfo?.color,
+                      }}
+                    >
+                      <Zap className="w-3 h-3" />
+                      {weatherInfo?.icon} 天气角色强化生效中
+                    </div>
+                  );
+                })()}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {storyCharacters.map((character) => (
-                  <CharacterCard key={character.id} character={character} variant="compact" />
-                ))}
+                {storyCharacters.map((character) => {
+                  const storyRegion = story.region as Exclude<Region, '全部'>;
+                  const currentWeather = getWeatherByRegion(storyRegion);
+                  const weatherInfo = (WEATHER_INFO as any)[currentWeather];
+                  const buff = getCharacterWeatherBuff(character.type as any, currentWeather);
+                  return (
+                    <div key={character.id} className="relative">
+                      <CharacterCard character={character} variant="compact" />
+                      {buff > 0 && (
+                        <div
+                          className="absolute -top-2 -right-2 z-20 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-body font-bold shadow-lg animate-twinkle"
+                          style={{
+                            backgroundColor: weatherInfo?.color,
+                            color: 'white',
+                          }}
+                        >
+                          <Zap className="w-2.5 h-2.5" />
+                          +{buff}%
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -954,13 +1152,26 @@ export default function StoryDetail() {
                               </>
                             ) : (
                               <>
-                                <div className="inline-block px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[10px] font-body font-medium mb-1">
-                                  未解锁
+                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[10px] font-body font-medium mb-1">
+                                  {endingNode.endingType === 'secret' ? (
+                                    <>
+                                      <Lock className="w-2.5 h-2.5" />
+                                      隐藏结局
+                                    </>
+                                  ) : (
+                                    '未解锁'
+                                  )}
                                 </div>
                                 <h4 className="font-fairy text-base text-gray-400 mb-1">???</h4>
-                                <p className="text-xs text-gray-400 font-body">
+                                <p className="text-xs text-gray-400 font-body mb-1.5">
                                   继续探索故事来解锁这个结局
                                 </p>
+                                {endingNode.endingType === 'secret' && (
+                                  <div className="text-[10px] font-body text-fairy-purple/80 bg-fairy-purple/10 rounded-lg px-2 py-1 inline-flex items-center gap-1">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    提示：可尝试在特殊天气下重玩故事
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>

@@ -121,3 +121,554 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #C084FC, #F9A8D4);
 }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.animate-twinkle {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+.weather-effects-container {
+  z-index: 5;
+}
+
+.weather-particle {
+  position: absolute;
+  top: -10%;
+  user-select: none;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+}
+
+.weather-snow .weather-particle {
+  animation-name: snowfall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(110vh) translateX(60px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.weather-snow-ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, rgba(220, 240, 255, 0.8) 100%);
+  pointer-events: none;
+}
+
+.meteor-shower {
+  position: absolute;
+  width: 2px;
+  height: var(--meteor-length, 100px);
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.8) 20%, rgba(200, 220, 255, 0.6) 50%, rgba(180, 160, 255, 0.4) 80%, transparent 100%);
+  border-radius: 2px;
+  transform: rotate(-30deg);
+  animation-name: meteorFall;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 20px rgba(180, 160, 255, 0.3);
+}
+
+.meteor-shower::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #fff, 0 0 24px rgba(180, 160, 255, 0.6);
+}
+
+@keyframes meteorFall {
+  0% {
+    transform: rotate(-30deg) translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-30deg) translateY(500px) translateX(300px);
+    opacity: 0;
+  }
+}
+
+.weather-stars-bg {
+  position: absolute;
+  inset: 0;
+}
+
+.bg-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.twinkle-star {
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.weather-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.aurora-band {
+  position: absolute;
+  top: -20%;
+  left: -10%;
+  width: 120%;
+  height: 60%;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+  animation: auroraWave 12s ease-in-out infinite;
+}
+
+.aurora-1 {
+  background: linear-gradient(180deg, rgba(0, 255, 200, 0.4), transparent 70%);
+  animation-delay: 0s;
+  transform: translateX(-5%);
+}
+
+.aurora-2 {
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.35), transparent 70%);
+  animation-delay: -2s;
+  transform: translateX(5%);
+}
+
+.aurora-3 {
+  background: linear-gradient(180deg, rgba(236, 72, 153, 0.3), transparent 70%);
+  animation-delay: -4s;
+  transform: translateX(-10%);
+  height: 50%;
+}
+
+.aurora-4 {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.35), transparent 70%);
+  animation-delay: -6s;
+  transform: translateX(8%);
+  height: 45%;
+}
+
+@keyframes auroraWave {
+  0%, 100% {
+    transform: translateX(-5%) scaleY(1) skewX(0deg);
+    opacity: 0.4;
+  }
+  25% {
+    transform: translateX(5%) scaleY(1.1) skewX(2deg);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(0%) scaleY(0.95) skewX(-2deg);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translateX(8%) scaleY(1.05) skewX(1deg);
+    opacity: 0.55;
+  }
+}
+
+.aurora-sparkle {
+  position: absolute;
+  animation: auroraSparkle 3s ease-in-out infinite;
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes auroraSparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.5) translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) translateY(-10px);
+  }
+}
+
+.weather-candy .candy-particle {
+  animation-name: candyFall;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes candyFall {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(30px) rotate(180deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(-20px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.weather-candy-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 182, 193, 0.15), transparent 40%),
+    radial-gradient(circle at 80% 60%, rgba(255, 215, 0, 0.1), transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(186, 85, 211, 0.12), transparent 40%);
+  pointer-events: none;
+  animation: candyGlow 6s ease-in-out infinite;
+}
+
+@keyframes candyGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.weather-petal .petal-particle {
+  animation-name: petalFall;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes petalFall {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.95;
+  }
+  25% {
+    transform: translateY(25vh) translateX(var(--sway-amount, 30px)) rotate(90deg);
+  }
+  50% {
+    transform: translateY(50vh) translateX(calc(var(--sway-amount, 30px) * -1)) rotate(180deg);
+  }
+  75% {
+    transform: translateY(75vh) translateX(var(--sway-amount, 30px)) rotate(270deg);
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(110vh) translateX(calc(var(--sway-amount, 30px) * -0.5)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.weather-moonlight {
+  position: absolute;
+  inset: 0;
+}
+
+.moon-container {
+  position: absolute;
+  top: 8%;
+  right: 10%;
+  width: 120px;
+  height: 120px;
+}
+
+.moon-body {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 35% 35%, #fffef5 0%, #f5f0e0 40%, #e8e0d0 100%);
+  border-radius: 50%;
+  box-shadow:
+    inset -8px -4px 20px rgba(200, 190, 170, 0.4),
+    0 0 40px rgba(255, 255, 240, 0.5),
+    0 0 80px rgba(255, 255, 230, 0.3);
+}
+
+.moon-crater {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(200, 190, 170, 0.35);
+  box-shadow: inset 1px 1px 3px rgba(160, 150, 130, 0.4);
+}
+
+.moon-crater-1 {
+  width: 24px;
+  height: 24px;
+  top: 25%;
+  left: 20%;
+}
+
+.moon-crater-2 {
+  width: 16px;
+  height: 16px;
+  top: 55%;
+  left: 45%;
+}
+
+.moon-crater-3 {
+  width: 12px;
+  height: 12px;
+  top: 35%;
+  left: 60%;
+}
+
+.moon-glow {
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(circle, rgba(255, 255, 230, 0.25) 0%, rgba(200, 200, 255, 0.1) 40%, transparent 70%);
+  border-radius: 50%;
+  animation: moonGlow 4s ease-in-out infinite;
+}
+
+@keyframes moonGlow {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.moon-rays {
+  position: absolute;
+  inset: -80%;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(255, 255, 230, 0.03) 10deg,
+      transparent 20deg,
+      transparent 80deg,
+      rgba(255, 255, 230, 0.02) 90deg,
+      transparent 100deg,
+      transparent 170deg,
+      rgba(255, 255, 230, 0.03) 180deg,
+      transparent 190deg,
+      transparent 260deg,
+      rgba(255, 255, 230, 0.02) 270deg,
+      transparent 280deg
+    );
+  animation: spin-slow 120s linear infinite;
+}
+
+.weather-rainbow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.rainbow-arch {
+  position: absolute;
+  bottom: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140%;
+  height: 70%;
+}
+
+.rainbow-band {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0;
+  border-style: solid;
+  border-bottom: none;
+  animation: rainbowPulse 5s ease-in-out infinite;
+}
+
+.rainbow-red {
+  width: 100%;
+  height: 100%;
+  border-width: 18px;
+  border-color: rgba(239, 68, 68, 0.45);
+  animation-delay: 0s;
+}
+
+.rainbow-orange {
+  width: 94%;
+  height: 94%;
+  bottom: 18px;
+  border-width: 16px;
+  border-color: rgba(249, 115, 22, 0.45);
+  animation-delay: -0.2s;
+}
+
+.rainbow-yellow {
+  width: 88%;
+  height: 88%;
+  bottom: 34px;
+  border-width: 14px;
+  border-color: rgba(234, 179, 8, 0.45);
+  animation-delay: -0.4s;
+}
+
+.rainbow-green {
+  width: 82%;
+  height: 82%;
+  bottom: 48px;
+  border-width: 12px;
+  border-color: rgba(34, 197, 94, 0.45);
+  animation-delay: -0.6s;
+}
+
+.rainbow-blue {
+  width: 76%;
+  height: 76%;
+  bottom: 60px;
+  border-width: 10px;
+  border-color: rgba(59, 130, 246, 0.45);
+  animation-delay: -0.8s;
+}
+
+.rainbow-indigo {
+  width: 70%;
+  height: 70%;
+  bottom: 70px;
+  border-width: 9px;
+  border-color: rgba(99, 102, 241, 0.45);
+  animation-delay: -1s;
+}
+
+.rainbow-violet {
+  width: 64%;
+  height: 64%;
+  bottom: 79px;
+  border-width: 8px;
+  border-color: rgba(168, 85, 247, 0.45);
+  animation-delay: -1.2s;
+}
+
+@keyframes rainbowPulse {
+  0%, 100% {
+    opacity: 0.6;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.9;
+    filter: brightness(1.2);
+  }
+}
+
+.rainbow-cloud {
+  position: absolute;
+  font-size: 56px;
+  animation: cloudFloat 10s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.rainbow-cloud-left {
+  bottom: 5%;
+  left: 10%;
+}
+
+.rainbow-cloud-right {
+  bottom: 5%;
+  right: 10%;
+  animation-delay: -3s;
+}
+
+@keyframes cloudFloat {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(15px) translateY(-8px);
+  }
+}
+
+.rainbow-sparkle {
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+}
+
+.weather-sunny {
+  position: absolute;
+  inset: 0;
+}
+
+.sun-container {
+  position: absolute;
+  top: 6%;
+  left: 10%;
+  width: 140px;
+  height: 140px;
+}
+
+.sun-body {
+  position: absolute;
+  inset: 25%;
+  background: radial-gradient(circle, #fff 0%, #ffd700 40%, #ffb700 80%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 40px rgba(255, 215, 0, 0.6),
+    0 0 80px rgba(255, 183, 0, 0.4),
+    inset -4px -4px 16px rgba(255, 140, 0, 0.3);
+  animation: sunPulse 4s ease-in-out infinite;
+}
+
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.sun-ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 45%;
+  margin-left: -3px;
+  transform-origin: center top;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.6) 0%, transparent 100%);
+  border-radius: 3px;
+  animation: sunRayPulse 3s ease-in-out infinite;
+}
+
+@keyframes sunRayPulse {
+  0%, 100% { opacity: 0.4; height: 42%; }
+  50% { opacity: 0.8; height: 48%; }
+}
+
+.sun-glow {
+  position: absolute;
+  inset: -30%;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, rgba(255, 183, 0, 0.1) 40%, transparent 70%);
+  border-radius: 50%;
+  animation: sunPulse 5s ease-in-out infinite;
+}
+
